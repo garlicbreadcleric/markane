@@ -9,15 +9,16 @@ import {
   CompletionParams,
   CompletionTriggerKind,
   InsertReplaceEdit,
+  Position,
   Range,
   TextEdit,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { Config } from "../config";
-import { Position } from "../markdown";
 import { CitationProvider } from "../providers/citation-provider";
 import { DocumentProvider } from "../providers/document-provider";
 import { MarkdownElementBase } from "../markdown/types";
+import { SnippetProvider } from "../providers/snippet-provider";
 
 // export const MAX_NUMBER_OF_COMPLETION_ITEMS: number = 300;
 
@@ -25,7 +26,8 @@ export class CompletionManager {
   constructor(
     protected config: Config,
     protected documentProvider: DocumentProvider,
-    protected citationProvider: CitationProvider
+    protected citationProvider: CitationProvider,
+    protected snippetProvider: SnippetProvider
   ) {}
 
   async getSurroundingLinkRange(
@@ -87,6 +89,10 @@ export class CompletionManager {
       url.fileURLToPath(params.textDocument.uri),
       src
     );
+
+    if (params.context?.triggerCharacter === "/") {
+      return await this.onSnippetCompletion(params, textDocument);
+    }
 
     let element = markdown.getElementAt(doc.elements, params.position, true);
     if (element?.type === "raw" || element?.type === "heading") {
@@ -194,6 +200,36 @@ export class CompletionManager {
       isIncomplete,
       items,
     };
+  }
+
+  async onSnippetCompletion(params: CompletionParams, textDocument: TextDocument): Promise<CompletionItem[] | null> {
+    // TODO.
+    // return [
+    //   {
+    //     label: "Snippet Template",
+    //     kind: CompletionItemKind.Snippet,
+    //     insertText: "## foo\n\n- bar\n- baz",
+    //     additionalTextEdits: [
+    //       TextEdit.replace(
+    //         Range.create({ line: params.position.line, character: params.position.character - 1 }, params.position),
+    //         ""
+    //       )
+    //     ]
+    //   }
+    // ];
+    return this.snippetProvider.snippets.map((snippet) => {
+      return {
+        label: snippet.title,
+        kind: CompletionItemKind.Snippet,
+        insertText: snippet.text,
+        additionalTextEdits: [
+          TextEdit.replace(
+            Range.create({ line: params.position.line, character: params.position.character - 1 }, params.position),
+            ""
+          )
+        ]
+      };
+    });
   }
 
   async onCitationCompletion(
