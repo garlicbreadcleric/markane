@@ -14,6 +14,7 @@ export type Config = {
   editor?: string;
   logLevel?: string;
   templates?: string[];
+  snippets?: string[];
   folders?: FolderConfig[];
   citations?: {
     autocomplete?: boolean;

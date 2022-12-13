@@ -12,6 +12,7 @@ import { CitationProvider } from "./providers/citation-provider";
 import { TemplateProvider } from "./providers/template-provider";
 import { Preprocessor } from "./preprocessor";
 import { QueryManager } from "./preprocessor/query";
+import { SnippetProvider } from "./providers/snippet-provider";
 
 const cliParserOptions = {
   executableName: "markane",
@@ -126,6 +127,7 @@ export async function main() {
   const documentProvider = new DocumentProvider(config, markdownParser, logger);
   const citationProvider = new CitationProvider(config, logger);
   const templateProvider = new TemplateProvider(config, logger);
+  const snippetProvider = new SnippetProvider(config);
 
   const queryManager = new QueryManager(documentProvider, logger);
 
@@ -171,7 +173,8 @@ export async function main() {
         preprocessor,
         documentProvider,
         citationProvider,
-        templateProvider
+        templateProvider,
+        snippetProvider
       );
       break;
     case "parse":

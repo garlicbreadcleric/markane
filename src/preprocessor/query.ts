@@ -17,6 +17,7 @@ export class QueryManager {
         documents: Array.from(this.documentProvider.documents.values()),
         filePath,
         dirPath: path.dirname(filePath),
+        rootPath: process.cwd(),
 
         hasKeyword(document: MarkdownDocument, keyword: string) {
           return document.metadata.keywords?.includes(keyword);

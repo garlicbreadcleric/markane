@@ -32,6 +32,7 @@ import { Preprocessor } from "../preprocessor";
 import { DefinitionManager } from "./definition";
 import { SymbolManager } from "./symbol";
 import { TemplateProvider } from "../providers/template-provider";
+import { SnippetProvider } from "../providers/snippet-provider";
 
 export async function runLspServer(
   config: Config,
@@ -39,12 +40,14 @@ export async function runLspServer(
   preprocessor: Preprocessor,
   documentProvider: DocumentProvider,
   citationProvider: CitationProvider,
-  templateProvider: TemplateProvider
+  templateProvider: TemplateProvider,
+  snippetProvider: SnippetProvider
 ) {
   const completionManager = new CompletionManager(
     config,
     documentProvider,
-    citationProvider
+    citationProvider,
+    snippetProvider
   );
   const definitionManager = new DefinitionManager(config, documentProvider);
   const symbolManager = new SymbolManager(config, documentProvider);
@@ -58,7 +61,7 @@ export async function runLspServer(
         textDocumentSync: TextDocumentSyncKind.Incremental,
         completionProvider: {
           resolveProvider: true,
-          triggerCharacters: ["[", "@"],
+          triggerCharacters: ["[", "@", "/"],
         },
         codeActionProvider: true,
         hoverProvider: true,
@@ -70,7 +73,11 @@ export async function runLspServer(
   });
 
   connection.onInitialized(async () => {
-    await Promise.all([citationProvider.index(), documentProvider.index()]);
+    await Promise.all([
+      documentProvider.index(),
+      citationProvider.index(),
+      snippetProvider.index()
+    ]);
   });
 
   connection.onDidChangeWatchedFiles(async (params) => {
