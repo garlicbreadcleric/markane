@@ -8,9 +8,13 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 
 - Language server
   - Clients: [VS Code](https://github.com/garlicbreadcleric/vscode-markane)
-  - Title-based file auto-complete
-  - Citation auto-complete
+  - Title-based file auto-completion
+    - Triggered with `[` or when manually triggered inside the square brackets
+  - Citation auto-completion
+    - Triggered with `@`
     - Currently only CSL JSON is supported
+  - Snippets auto-completion
+    - Triggered with `/`
   - Title-based document search
   - Go to definition for links and Pandoc citations
     - For citations it opens file which has citation key as it's name
@@ -18,8 +22,6 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 - Creating files from templates
   - Handlebars is used for templates
   - Can use citation metadata inside the template if citation key is specified
-- Snippets
-  - Triggered by typing `/`
 - Preprocessor
   - **Warning**: Current implementation is more of a proof of concept, expect breaking changes in future versions
   - Evaluating queries and writing the results to the Markdown file
