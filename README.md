@@ -7,7 +7,7 @@ _Arcane focus for Markdown spell-casting_
 Markane is a command-line tool for taking Markdown notes and navigating between them. The preferred Markdown dialect is Pandoc Markdown, although you can use it with CommonMark if you don't use some Pandoc-related features. Markane features include:
 
 - Language server
-  <!-- - Clients: VS Code -->
+  - Clients: [VS Code](https://github.com/garlicbreadcleric/vscode-markane)
   - Title-based file auto-complete
   - Citation auto-complete
     - Currently only CSL JSON is supported
@@ -18,6 +18,8 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 - Creating files from templates
   - Handlebars is used for templates
   - Can use citation metadata inside the template if citation key is specified
+- Snippets
+  - Triggered by typing `/`
 - Preprocessor
   - **Warning**: Current implementation is more of a proof of concept, expect breaking changes in future versions
   - Evaluating queries and writing the results to the Markdown file
@@ -92,6 +94,10 @@ editor: codium
 # Specifies folders that contain Handlebars templates for creating new notes.
 templates:
   - .templates
+
+# Specifies folders that contain Markdown files with snippets.
+snippets:
+  - .snippets
 
 # Specifies folders that contain notes. Currently the folders aren't recursive,
 # i.e. ./notes/foo.md is included in the note collection but ./notes/bar/baz.md
