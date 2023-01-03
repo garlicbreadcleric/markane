@@ -3,6 +3,29 @@ import url from "url";
 import fs from "fs";
 import { exec } from "child_process";
 
+import * as handlebars from "handlebars";
+import slugify from "slugify";
+import { DateTime } from "luxon";
+
+export const handlebarsOptions: handlebars.RuntimeOptions = {
+  helpers: {
+    slug(s: any) {
+      return typeof s === "string" ? slugify(s.toLowerCase()) : s;
+    },
+    format(f: any, d: any) {
+      if (d instanceof DateTime) {
+        return d.toFormat(f);
+      }
+      return d;
+    },
+    nonEmpty(xs: any) {
+      if (xs == null) return false;
+      if (!(xs instanceof Array)) return false;
+      return xs.length > 0;
+    },
+  },
+};
+
 export type Predicate<T> = (t: T) => boolean;
 
 export function everyPredicate<T>(...preds: Predicate<T>[]): Predicate<T> {

@@ -16,8 +16,7 @@ import { SnippetProvider } from "./providers/snippet-provider";
 
 const cliParserOptions = {
   executableName: "markane",
-  description:
-    "Markane - Arcane focus for Markdown spell-casting",
+  description: "Markane - Arcane focus for Markdown spell-casting",
   commands: {
     new: {
       description: "Create a new note",
@@ -49,10 +48,11 @@ const cliParserOptions = {
       options: {
         citationKey: {
           short: "c",
-          description: "Citation key (will output all citation entries if none provided)",
+          description:
+            "Citation key (will output all citation entries if none provided)",
           type: cli.CliCommandOptionType.String,
-        }
-      }
+        },
+      },
     },
     lsp: {
       description: "Run language server",
@@ -159,10 +159,12 @@ export async function main() {
     case "bibliography": {
       await citationProvider.index();
       if (cliOptions.options.citationKey != null) {
-        const entry = citationProvider.getByCitationKey(cliOptions.options.citationKey);
+        const entry = citationProvider.getByCitationKey(
+          cliOptions.options.citationKey
+        );
         console.log(JSON.stringify(entry));
       } else {
-        console.log(JSON.stringify(citationProvider.bibliography))
+        console.log(JSON.stringify(citationProvider.bibliography));
       }
       break;
     }

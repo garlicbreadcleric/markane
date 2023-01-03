@@ -6,7 +6,13 @@ import slugify from "slugify";
 import { DateTime } from "luxon";
 
 import { Config, FolderConfig } from "../config";
-import { execCommand, isFileReadable, readFile, writeFile } from "../utils";
+import {
+  execCommand,
+  handlebarsOptions,
+  isFileReadable,
+  readFile,
+  writeFile,
+} from "../utils";
 import { Logger } from "../logger";
 import { BibliographyEntry } from "./citation-provider";
 
@@ -20,29 +26,7 @@ export type CreateFileOptions = {
 };
 
 export class TemplateProvider {
-  private didSetupHandlebars: boolean = false;
   constructor(protected config: Config, protected logger: Logger) {}
-
-  setupHandlebars() {
-    if (this.didSetupHandlebars) return;
-
-    handlebars.registerHelper("slug", (s) =>
-      typeof s == "string" ? slugify(s.toLowerCase()) : s
-    );
-    handlebars.registerHelper("format", (f, d) => {
-      if (d instanceof DateTime) {
-        return d.toFormat(f);
-      }
-      return d;
-    });
-    handlebars.registerHelper("nonEmpty", (xs) => {
-      if (xs == null) return false;
-      if (!(xs instanceof Array)) return false;
-      return xs.length > 0;
-    });
-
-    this.didSetupHandlebars = true;
-  }
 
   async getTemplateSource(templateName: string): Promise<string | null> {
     const cwd = process.cwd();
@@ -82,7 +66,7 @@ export class TemplateProvider {
     folderPath: string,
     options: Partial<CreateFileOptions>
   ): Promise<{ filePath: string; fileContent: string }> {
-    this.setupHandlebars();
+    // this.setupHandlebars();
 
     const folderConfig = this.getFolderConfig(folderPath);
     const fileNameTemplateSource = folderConfig?.file ?? "{{ slug title }}.md";
@@ -107,9 +91,9 @@ export class TemplateProvider {
       keywords: options.keywords ?? [],
     };
 
-    const fileName = fileNameTemplate(templateInput);
+    const fileName = fileNameTemplate(templateInput, handlebarsOptions);
     const filePath = path.join(folderPath, fileName);
-    const fileContent = fileContentTemplate(templateInput);
+    const fileContent = fileContentTemplate(templateInput, handlebarsOptions);
 
     return { filePath, fileContent };
   }
