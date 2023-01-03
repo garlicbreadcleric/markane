@@ -33,6 +33,7 @@ import { DefinitionManager } from "./definition";
 import { SymbolManager } from "./symbol";
 import { TemplateProvider } from "../providers/template-provider";
 import { SnippetProvider } from "../providers/snippet-provider";
+import { ActionManager } from "./action";
 
 export async function runLspServer(
   config: Config,
@@ -51,6 +52,12 @@ export async function runLspServer(
   );
   const definitionManager = new DefinitionManager(config, documentProvider);
   const symbolManager = new SymbolManager(config, documentProvider);
+  const actionManager = new ActionManager(
+    config,
+    documentProvider,
+    citationProvider,
+    templateProvider
+  );
 
   const connection = createConnection(process.stdin, process.stdout);
   const documents = new TextDocuments(TextDocument);
@@ -76,7 +83,7 @@ export async function runLspServer(
     await Promise.all([
       documentProvider.index(),
       citationProvider.index(),
-      snippetProvider.index()
+      snippetProvider.index(),
     ]);
   });
 
@@ -126,71 +133,7 @@ export async function runLspServer(
   connection.onCodeAction(async (params: CodeActionParams) => {
     const textDocument = documents.get(params.textDocument.uri);
     if (textDocument == null) return null;
-
-    const actions: CodeAction[] = [];
-
-    const document = await documentProvider.getDocumentBySrc(
-      url.fileURLToPath(params.textDocument.uri),
-      textDocument.getText()
-    );
-
-    const element = markdown.getElementAt(
-      document.elements,
-      params.range.start
-    );
-    if (element == null) return null;
-
-    if (
-      element.type === "citation" &&
-      markdown.isWithinRange(params.range.start, element) &&
-      markdown.isWithinRange(params.range.end, element)
-    ) {
-      const sourceDirectory = config.citations?.folders?.at(0);
-      if (sourceDirectory == null) return;
-
-      const citationTarget = await documentProvider.getDocumentByCitationKey(
-        element.key.content
-      );
-
-      if (citationTarget == null) {
-        const citationEntry = citationProvider.getByCitationKey(
-          element.key.content
-        );
-
-        const { filePath, fileContent } =
-          await templateProvider.prepareToCreateFile(
-            `${process.cwd()}/${sourceDirectory}`,
-            {
-              citationEntry,
-            }
-          );
-
-        const action: CodeAction = {
-          title: "Create a source note",
-          edit: {
-            documentChanges: [
-              { kind: "create", uri: filePath },
-              {
-                textDocument: { uri: filePath, version: null },
-                edits: [
-                  {
-                    range: Range.create(
-                      Position.create(0, 0),
-                      Position.create(0, 0)
-                    ),
-                    newText: fileContent,
-                  },
-                ],
-              },
-            ],
-          },
-        };
-
-        actions.push(action);
-      }
-    }
-
-    return actions;
+    return await actionManager.onCodeAction(textDocument, params);
   });
 
   connection.onCodeActionResolve(async (action: CodeAction) => {

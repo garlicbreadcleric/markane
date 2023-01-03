@@ -1,6 +1,8 @@
 import url from "url";
 import path from "path";
 
+import * as handlebars from "handlebars";
+
 import * as markdown from "../markdown";
 import {
   CompletionItem,
@@ -19,6 +21,8 @@ import { CitationProvider } from "../providers/citation-provider";
 import { DocumentProvider } from "../providers/document-provider";
 import { MarkdownElementBase } from "../markdown/types";
 import { SnippetProvider } from "../providers/snippet-provider";
+import { handlebarsOptions } from "../utils";
+import { DateTime } from "luxon";
 
 // export const MAX_NUMBER_OF_COMPLETION_ITEMS: number = 300;
 
@@ -91,7 +95,7 @@ export class CompletionManager {
     );
 
     if (params.context?.triggerCharacter === "/") {
-      return await this.onSnippetCompletion(params, textDocument);
+      return await this.onSnippetCompletion(params, textDocument, doc);
     }
 
     let element = markdown.getElementAt(doc.elements, params.position, true);
@@ -135,12 +139,6 @@ export class CompletionManager {
     let isIncomplete = false;
 
     for (const d of this.documentProvider.documents.values()) {
-      // if (items.length >= MAX_NUMBER_OF_COMPLETION_ITEMS) {
-      //   isIncomplete = true;
-      //   break;
-      // }
-      // if (query != null && !d.filePath.toLowerCase().includes(query) && !(d.title ?? "").includes(query)) continue;
-
       const relativePath = path.relative(
         path.dirname(doc.filePath),
         d.filePath
@@ -202,32 +200,37 @@ export class CompletionManager {
     };
   }
 
-  async onSnippetCompletion(params: CompletionParams, textDocument: TextDocument): Promise<CompletionItem[] | null> {
-    // TODO.
-    // return [
-    //   {
-    //     label: "Snippet Template",
-    //     kind: CompletionItemKind.Snippet,
-    //     insertText: "## foo\n\n- bar\n- baz",
-    //     additionalTextEdits: [
-    //       TextEdit.replace(
-    //         Range.create({ line: params.position.line, character: params.position.character - 1 }, params.position),
-    //         ""
-    //       )
-    //     ]
-    //   }
-    // ];
+  async onSnippetCompletion(
+    params: CompletionParams,
+    textDocument: TextDocument,
+    document: markdown.MarkdownDocument
+  ): Promise<CompletionItem[] | null> {
     return this.snippetProvider.snippets.map((snippet) => {
+      const template = handlebars.compile(snippet.text);
+      const text = template(
+        {
+          now: DateTime.now(),
+          document,
+        },
+        handlebarsOptions
+      );
+
       return {
         label: snippet.title,
         kind: CompletionItemKind.Snippet,
-        insertText: snippet.text,
+        insertText: text,
         additionalTextEdits: [
           TextEdit.replace(
-            Range.create({ line: params.position.line, character: params.position.character - 1 }, params.position),
+            Range.create(
+              {
+                line: params.position.line,
+                character: params.position.character - 1,
+              },
+              params.position
+            ),
             ""
-          )
-        ]
+          ),
+        ],
       };
     });
   }

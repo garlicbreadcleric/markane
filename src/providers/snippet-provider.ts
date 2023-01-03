@@ -5,8 +5,8 @@ import { Config } from "../config";
 import { readFile } from "../utils";
 
 export type Snippet = {
-  title: string,
-  text: string
+  title: string;
+  text: string;
 };
 
 export class SnippetProvider {
@@ -26,15 +26,18 @@ export class SnippetProvider {
           if (err) reject(err);
           else resolve(files);
         })
-      ).then((files) =>
-        files.filter((f) => path.extname(f) === ".md")
-      );
+      ).then((files) => files.filter((f) => path.extname(f) === ".md"));
 
       for (const filePath of filePaths) {
         if (path.extname(filePath) !== ".md") continue;
-        const text = await readFile(path.join(folderPath, filePath)).then((data) => data.toString());
+        const text = await readFile(path.join(folderPath, filePath)).then(
+          (data) => data.toString()
+        );
 
-        this.snippets.push({ title: filePath.split(".").slice(0, -1).join("."), text })
+        this.snippets.push({
+          title: filePath.split(".").slice(0, -1).join("."),
+          text,
+        });
       }
     }
   }

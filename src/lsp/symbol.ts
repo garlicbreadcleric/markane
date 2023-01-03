@@ -45,7 +45,10 @@ export class SymbolManager {
         const filePath = path.relative(process.cwd(), document.filePath);
 
         return {
-          name: document.title != null ? `${document.title}  ${filePath}` : filePath,
+          name:
+            document.title != null
+              ? `${document.title}  ${filePath}`
+              : filePath,
           kind: SymbolKind.File,
           location: {
             uri: url.pathToFileURL(document.filePath).toString(),
