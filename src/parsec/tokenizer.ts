@@ -112,11 +112,6 @@ export class Tokenizer {
   }
 
   async loadGrammar(scopeName: string): Promise<vsctm.IGrammar> {
-    // if (this.isInitialized)
-    //   throw new Error("Cannot initialize the parser twice.");
-    // const grammar = await this.registry.loadGrammar("text.html.markdown");
-    // this.grammar = grammar;
-    // this.isInitialized = true;
     if (this.grammars.has(scopeName)) {
       return this.grammars.get(scopeName)!;
     }

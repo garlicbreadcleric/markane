@@ -34,6 +34,7 @@ import { SymbolManager } from "./symbol";
 import { TemplateProvider } from "../providers/template-provider";
 import { SnippetProvider } from "../providers/snippet-provider";
 import { ActionManager } from "./action";
+import assert from "assert";
 
 export async function runLspServer(
   config: Config,
@@ -160,13 +161,25 @@ export async function runLspServer(
 
       const { start, end } = element;
 
-      if (element.type === "comment") return null;
-      if (
+      const isOverInlineLinkPath =
         element.type === "inlineLink" &&
         element.path != null &&
-        markdown.isWithinRange(position, element.path) &&
-        utils.isRelativeLink(element.path.content)
+        markdown.isWithinRange(position, element.path);
+      const isOverInlineImagePath =
+        element.type === "inlineImage" &&
+        element.path != null &&
+        markdown.isWithinRange(position, element.path);
+      const hasRelativePath =
+        (isOverInlineLinkPath || isOverInlineImagePath) &&
+        utils.isRelativeLink(element.path!.content);
+
+      if (element.type === "comment") return null;
+      if (
+        hasRelativePath &&
+        path.extname(element.path!.content) === ".md"
       ) {
+        assert(element.path != null);
+
         const target = await documentProvider.getDocumentByPath(
           path.join(
             path.dirname(url.fileURLToPath(params.textDocument.uri)),
@@ -205,11 +218,13 @@ export async function runLspServer(
       }
 
       if (
-        element.type === "inlineImage" &&
-        element.path != null &&
-        markdown.isWithinRange(position, element.path) &&
-        utils.isRelativeLink(element.path.content)
+        hasRelativePath &&
+        [".png", ".jpg", ".jpeg", ".gif"].includes(
+          path.extname(element.path!.content).toLowerCase()
+        )
       ) {
+        assert(element.path != null);
+
         const target = path.join(
           path.dirname(url.fileURLToPath(params.textDocument.uri)),
           element.path.content
@@ -252,10 +267,6 @@ export async function runLspServer(
 
     await utils.writeFile(filePath, renderedDoc);
   });
-
-  // connection.onNotification("createDocument", async ({folder, title}) => {
-  //   await templateProvider.createFile(folder, { title });
-  // });
 
   documents.listen(connection);
   connection.listen();

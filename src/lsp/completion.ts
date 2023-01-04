@@ -24,8 +24,6 @@ import { SnippetProvider } from "../providers/snippet-provider";
 import { handlebarsOptions } from "../utils";
 import { DateTime } from "luxon";
 
-// export const MAX_NUMBER_OF_COMPLETION_ITEMS: number = 300;
-
 export class CompletionManager {
   constructor(
     protected config: Config,

@@ -286,8 +286,6 @@ export type WithAcc<TValue, TAcc> = {
   acc: TAcc;
 };
 
-// fooP :: Parser t -> (t -> s -> s) -> s -> Parser (s, t[])
-// fooP' :: Parser t -> Parser t2 -> (t -> s -> s) -> (t2 -> s -> s) -> s -> Parser (s, t[])
 export function manyWithAccP<TValue, TAcc>(
   p: Parser<TValue>,
   accFn: (value: TValue, acc: TAcc) => TAcc,

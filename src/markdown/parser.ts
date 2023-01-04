@@ -54,7 +54,6 @@ export const parseFrontmatter: parsec.Parser<MarkdownFrontmatter> = parsec
                 end,
                 metadata,
               });
-              // return parsec.Parser.pure(fm);
             } catch (e: any) {
               return parsec.Parser.fail(e.toString());
             }

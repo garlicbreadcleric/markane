@@ -66,8 +66,6 @@ export class TemplateProvider {
     folderPath: string,
     options: Partial<CreateFileOptions>
   ): Promise<{ filePath: string; fileContent: string }> {
-    // this.setupHandlebars();
-
     const folderConfig = this.getFolderConfig(folderPath);
     const fileNameTemplateSource = folderConfig?.file ?? "{{ slug title }}.md";
     let fileContentTemplateSource = "";
