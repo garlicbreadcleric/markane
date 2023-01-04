@@ -21,9 +21,7 @@ export type Config = {
     bibliography?: string;
     folders?: string[];
   };
-  lsp?: {
-    pandocPreview?: boolean;
-  };
+  pandocPreview?: boolean;
 };
 
 export async function getConfig(): Promise<Config | null> {

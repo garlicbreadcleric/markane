@@ -16,6 +16,7 @@ import { DocumentProvider } from "../providers/document-provider";
 import { MarkdownInlineLink } from "../markdown/types";
 import { MarkdownInlineImage } from "../markdown/types";
 import { MarkdownCitation } from "../markdown/types";
+import assert from "assert";
 
 export class DefinitionManager {
   constructor(
@@ -37,11 +38,24 @@ export class DefinitionManager {
 
     if (element == null) return null;
 
+    const hasLocalLink =
+      (element.type === "inlineImage" || element.type === "inlineLink") &&
+      element.path !== null &&
+      !utils.isUri(element.path.content) &&
+      markdown.isWithinRange(params.position, element.path);
+
     switch (element.type) {
       case "inlineLink":
-        return await this.getInlineLinkDefinition(params, element);
-      case "inlineImage":
-        return await this.getInlineImageDefinition(params, element);
+      case "inlineImage": {
+        if (hasLocalLink) {
+          if (path.extname(element.path!.content) === ".md") {
+            return await this.getMarkdownLinkDefinition(params, element);
+          } else {
+            return await this.getAssetDefinition(params, element);
+          }
+        }
+        return null;
+      }
       case "citation":
         return await this.getCitationDefinition(params, element);
     }
@@ -49,16 +63,12 @@ export class DefinitionManager {
     return null;
   }
 
-  async getInlineLinkDefinition(
+  async getMarkdownLinkDefinition(
     params: DefinitionParams,
-    element: MarkdownInlineLink
+    element: MarkdownInlineLink | MarkdownInlineImage
   ): Promise<LocationLink[] | null> {
-    if (
-      element.path == null ||
-      !markdown.isWithinRange(params.position, element.path) ||
-      utils.isUri(element.path.content)
-    )
-      return null;
+    // TODO: Change type instead of assert?
+    assert(element.path != null);
 
     const target = await this.documentProvider.getDocumentByPath(
       path.join(
@@ -88,16 +98,12 @@ export class DefinitionManager {
     ];
   }
 
-  async getInlineImageDefinition(
+  async getAssetDefinition(
     params: DefinitionParams,
-    element: MarkdownInlineImage
+    element: MarkdownInlineLink | MarkdownInlineImage
   ): Promise<LocationLink[] | null> {
-    if (
-      element.path == null ||
-      !markdown.isWithinRange(params.position, element.path) ||
-      utils.isUri(element.path.content)
-    )
-      return null;
+    // TODO: Change type instead of assert?
+    assert(element.path != null);
 
     const targetPath = path.join(
       path.dirname(url.fileURLToPath(params.textDocument.uri)),

@@ -19,7 +19,6 @@ export class DocumentProvider {
     this.documents = new Map();
 
     const cwd = process.cwd();
-    // const promises = [];
 
     for (const folder of this.config.folders ?? []) {
       if (folder.recursive) {
@@ -49,10 +48,7 @@ export class DocumentProvider {
 
       for (const file of files) {
         await this.updateDocument(file);
-        // promises.push(this.updateDocument(file));
       }
-
-      // await Promise.all(promises);
     }
   }
 
@@ -78,7 +74,7 @@ export class DocumentProvider {
 
   async updateDocumentPreview(doc: MarkdownDocument): Promise<string | null> {
     if (doc.source == null) return null;
-    if (this.config.lsp?.pandocPreview) {
+    if (this.config.pandocPreview) {
       const pandocOutput = await pandoc.convert(doc.source, {
         cwd: path.dirname(doc.filePath),
       });
@@ -111,7 +107,6 @@ export class DocumentProvider {
     const src = await utils.readFile(filePath).then((data) => data.toString());
 
     const doc = await this.getDocumentBySrc(filePath, src);
-    // await this.updateDocumentPreview(doc);
     return doc;
   }
 
