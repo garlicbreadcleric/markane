@@ -10,8 +10,6 @@ import { getConfig } from "./config";
 import { DocumentProvider } from "./providers/document-provider";
 import { CitationProvider } from "./providers/citation-provider";
 import { TemplateProvider } from "./providers/template-provider";
-import { Preprocessor } from "./preprocessor";
-import { QueryManager } from "./preprocessor/query";
 import { SnippetProvider } from "./providers/snippet-provider";
 
 const cliParserOptions = {
@@ -82,23 +80,6 @@ const cliParserOptions = {
         },
       },
     },
-    process: {
-      description: "Process input Markdown applying some transformations",
-      options: {
-        input: {
-          short: "i",
-          description:
-            "Input file path (will read from stdin if none provided)",
-          type: cli.CliCommandOptionType.String,
-        },
-        output: {
-          short: "o",
-          description:
-            "Output file path (will write to stdout if none provided)",
-          type: cli.CliCommandOptionType.String,
-        },
-      },
-    },
     help: {
       description: "Show help message",
     },
@@ -128,10 +109,6 @@ export async function main() {
   const citationProvider = new CitationProvider(config, logger);
   const templateProvider = new TemplateProvider(config, logger);
   const snippetProvider = new SnippetProvider(config);
-
-  const queryManager = new QueryManager(documentProvider, logger);
-
-  const preprocessor = new Preprocessor(queryManager);
 
   const cliParser = new cli.CliParser(cliParserOptions, logger);
   const cliOptions = cliParser.parse(process.argv.slice(2));
@@ -172,7 +149,6 @@ export async function main() {
       lsp.runLspServer(
         config,
         logger,
-        preprocessor,
         documentProvider,
         citationProvider,
         templateProvider,
@@ -210,23 +186,6 @@ export async function main() {
         }
       }
       break;
-    case "process": {
-      let input = null;
-      if (cliOptions.options.input == null) {
-        input = await readStdin();
-      } else {
-        console.error(`Unimplemented.`); // todo.
-        process.exit(1);
-      }
-
-      await documentProvider.index();
-
-      const document = await markdownParser.parse("input.md", input);
-      const processedDocument = await preprocessor.preprocess(document);
-
-      console.log(markdown.renderDocument(processedDocument));
-      break;
-    }
     case "help":
       console.log(cliParser.help());
       break;
