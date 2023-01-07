@@ -5,18 +5,11 @@ import {
   TextDocuments,
   createConnection,
   TextDocumentSyncKind,
-  CompletionItemKind,
-  Position,
-  Range,
-  LocationLink,
   FileChangeType,
-  InsertReplaceEdit,
-  TextEdit,
-  CompletionTriggerKind,
-  CompletionItem,
   CodeAction,
   CodeActionParams,
-  CodeActionKind,
+  Location,
+  CodeLens,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -74,6 +67,13 @@ export async function runLspServer(
         definitionProvider: true,
         workspaceSymbolProvider: true,
         documentSymbolProvider: true,
+        referencesProvider: true,
+        codeLensProvider: {
+          resolveProvider: false,
+        },
+        executeCommandProvider: {
+          commands: ["markane/showReferences"],
+        },
       },
     };
   });
@@ -129,6 +129,88 @@ export async function runLspServer(
     return await symbolManager.onDocumentSymbol(params, textDocument);
   });
 
+  connection.onReferences(async (params) => {
+    const textDocument = documents.get(params.textDocument.uri);
+    if (textDocument == null) return null;
+    const documentPath = url.fileURLToPath(textDocument.uri);
+    const locations: Location[] = [];
+
+    for (const doc of documentProvider.documents.values()) {
+      const links = markdown.filterElements((e) => {
+        if (e.type !== "inlineLink") return false;
+        if (e.path == null) return false;
+        return (
+          path.join(path.dirname(doc.filePath), e.path.content) === documentPath
+        );
+      }, doc.elements);
+      for (const link of links) {
+        locations.push({
+          range: { start: link.start, end: link.end },
+          uri: url.pathToFileURL(doc.filePath).toString(),
+        });
+      }
+    }
+
+    return locations;
+  });
+
+  connection.onCodeLens(async (params) => {
+    const textDocument = documents.get(params.textDocument.uri);
+    if (textDocument == null) return null;
+    const documentPath = url.fileURLToPath(textDocument.uri);
+    const document = await documentProvider.getDocumentBySrc(
+      documentPath,
+      textDocument.getText()
+    );
+
+    const heading = markdown.findElement(
+      (e) => e.type === "heading" && e.level === 1,
+      document.elements
+    );
+
+    const locations: Location[] = [];
+    for (const doc of documentProvider.documents.values()) {
+      const links = markdown.filterElements((e) => {
+        if (e.type !== "inlineLink") return false;
+        if (e.path == null) return false;
+        return (
+          path.join(path.dirname(doc.filePath), e.path.content) === documentPath
+        );
+      }, doc.elements);
+      for (const link of links) {
+        locations.push({
+          range: { start: link.start, end: link.end },
+          uri: url.pathToFileURL(doc.filePath).toString(),
+        });
+      }
+    }
+
+    if (locations.length === 0) return null;
+
+    const range =
+      heading == null
+        ? { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } }
+        : { start: heading.start, end: heading.end };
+    const position = range.start;
+
+    const lens: CodeLens = {
+      command: {
+        command: "markane/showReferences",
+        title:
+          `${locations.length} ` +
+          (locations.length === 1 ? "reference" : "references"),
+        arguments: [params.textDocument.uri, position, locations],
+      },
+      range,
+    };
+
+    return [lens];
+  });
+
+  connection.onCodeLensResolve(async (codeLens) => {
+    return codeLens;
+  });
+
   connection.onCodeAction(async (params: CodeActionParams) => {
     const textDocument = documents.get(params.textDocument.uri);
     if (textDocument == null) return null;
@@ -172,10 +254,7 @@ export async function runLspServer(
         utils.isRelativeLink(element.path!.content);
 
       if (element.type === "comment") return null;
-      if (
-        hasRelativePath &&
-        path.extname(element.path!.content) === ".md"
-      ) {
+      if (hasRelativePath && path.extname(element.path!.content) === ".md") {
         assert(element.path != null);
 
         const target = await documentProvider.getDocumentByPath(
@@ -251,8 +330,26 @@ export async function runLspServer(
     return null;
   });
 
-  connection.onNotification("indexDocuments", async () => {
+  connection.onNotification("markane/indexDocuments", async () => {
     await documentProvider.index();
+  });
+
+  connection.onExecuteCommand(async (params) => {
+    switch (params.command) {
+      case "markane/showReferences": {
+        const uri = params.arguments?.at(0);
+        const position = params.arguments?.at(1);
+        const locations = params.arguments?.at(2);
+
+        if (uri != null && locations != null) {
+          await connection.sendNotification("markane/showReferences", [
+            uri,
+            position,
+            locations,
+          ]);
+        }
+      }
+    }
   });
 
   documents.listen(connection);
