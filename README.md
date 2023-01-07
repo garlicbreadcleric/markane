@@ -22,9 +22,6 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 - Creating files from templates
   - Handlebars is used for templates
   - Can use citation metadata inside the template if citation key is specified
-- Preprocessor
-  - **Warning**: Current implementation is more of a proof of concept, expect breaking changes in future versions
-  - Evaluating queries and writing the results to the Markdown file
 
 ## Installation
 
@@ -74,12 +71,6 @@ markane parse
   -i, --input     Input file path (will read from stdin if none provided) [type: string]
   -o, --output    Output file path (will write to stdout if none provided) [type: string]
   -f, --format    Output format [values: textmate, markane; default: markane]
-
-markane process
-  Process input Markdown applying some transformations
-
-  -i, --input     Input file path (will read from stdin if none provided) [type: string]
-  -o, --output    Output file path (will write to stdout if none provided) [type: string]
 
 markane help
   Show help message
@@ -135,65 +126,6 @@ lsp:
   # Markdown, i.e. citations, fenced divs etc.
   pandocPreview: true
 ```
-
-### Preprocessor
-
-**Warning**: Current implementation is more of a proof of concept, expect breaking changes in future versions.
-
-There are two ways to run the preprocessor:
-
-1. Via command-line (`markane process -i note.md -o note.md`)
-2. Via language server command
-
-The first way is not recommended, as it's indexing all the notes on every run, which takes a bit of time; the language server only needs to index once and then apply incremental changes as the files change, so running preprocessor is much faster this way.
-
-The preprocessor finds fenced code blocks with `markane-query` language, parses their contents as queries and outputs the result to the `markane-output` fenced div following the fenced code block. If there's already `markane-output` fenced div after the code block, it's replaced, but there shouldn't be anything except whitespace between them.
-
-Preprocessor queries are written in JavaScript with some variables in scope:
-
-```typescript
-// The document index.
-declare const documents: {
-  filePath: string;
-  title?: string;
-  metadata: any;
-  elements: {
-    type: "frontmatter" | "heading" | "fencedCode" | "fencedDiv" | "inlineLink" | "referenceLink" | "inlineImage" | "citation" | "comment" | "raw";
-    start: { line: number, character: number };
-    end: { line: number, character: number };
-    content: string;
-  }[];
-  source?: string;
-  preview?: string;
-}[];
-
-// Absolute path of the current file.
-declare const filePath: string;
-
-// Absolute path of the directory that contains the current file.
-declare const dirPath: string;
-
-declare function hasKeyword(document, keyword: string): boolean;
-declare function hasEveryKeyword(document, keywords: string[]): boolean;
-declare function hasSomeKeyword(document, keywords: string[]): boolean;
-
-declare function foldElements<T>(
-  f: (acc: T, element: MarkdownElement) => { acc: T, isFinished?: boolean },
-  initial: T,
-  elements: MarkdownElement | MarkdownElement[]
-): T;
-
-declare function mapElements<T>(
-  f: (element: MarkdownElement) => T,
-  elements: MarkdownElement | MarkdownElement[]
-): T[];
-
-declare function filterElements(f: (element: MarkdownElement) => boolean): MarkdownElement[];
-
-declare function findElement(f: (element: MarkdownElement) => boolean, elements: MarkdownElement | MarkdownElement[]): MarkdownElement | null;
-```
-
-When the preprocessor is triggered, the code in `markane-query` code blocks is evaluated and the result of the last expression is written in the document inside a `markane-result` fenced div. If `markane-result` fenced div is already present, it gets rewritten.
 
 ## Issues and caveats
 

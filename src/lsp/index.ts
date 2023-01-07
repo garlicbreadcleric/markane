@@ -28,7 +28,6 @@ import { CitationProvider } from "../providers/citation-provider";
 
 import { CompletionManager } from "./completion";
 import { Logger } from "../logger";
-import { Preprocessor } from "../preprocessor";
 import { DefinitionManager } from "./definition";
 import { SymbolManager } from "./symbol";
 import { TemplateProvider } from "../providers/template-provider";
@@ -39,7 +38,6 @@ import assert from "assert";
 export async function runLspServer(
   config: Config,
   logger: Logger,
-  preprocessor: Preprocessor,
   documentProvider: DocumentProvider,
   citationProvider: CitationProvider,
   templateProvider: TemplateProvider,
@@ -255,17 +253,6 @@ export async function runLspServer(
 
   connection.onNotification("indexDocuments", async () => {
     await documentProvider.index();
-  });
-
-  connection.onNotification("processDocument", async (filePath: string) => {
-    if (!(await utils.isFileReadable(filePath))) return;
-
-    const src = await utils.readFile(filePath).then((data) => data.toString());
-    const doc = await documentProvider.getDocumentBySrc(filePath, src);
-    const processedDoc = await preprocessor.preprocess(doc);
-    const renderedDoc = markdown.renderDocument(processedDoc);
-
-    await utils.writeFile(filePath, renderedDoc);
   });
 
   documents.listen(connection);
