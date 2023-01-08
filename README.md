@@ -19,6 +19,7 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
   - Go to definition for links and Pandoc citations
     - For citations it opens file which has citation key as it's name
   - Document outline
+  - Backlinks
 - Creating files from templates
   - Handlebars is used for templates
   - Can use citation metadata inside the template if citation key is specified
