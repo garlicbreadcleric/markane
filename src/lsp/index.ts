@@ -1,5 +1,6 @@
 import url from "url";
 import path from "path";
+import assert from "assert";
 
 import {
   TextDocuments,
@@ -18,7 +19,6 @@ import * as utils from "../utils";
 import { Config } from "../config";
 import { DocumentProvider } from "../providers/document-provider";
 import { CitationProvider } from "../providers/citation-provider";
-
 import { CompletionManager } from "./completion";
 import { Logger } from "../logger";
 import { DefinitionManager } from "./definition";
@@ -26,7 +26,7 @@ import { SymbolManager } from "./symbol";
 import { TemplateProvider } from "../providers/template-provider";
 import { SnippetProvider } from "../providers/snippet-provider";
 import { ActionManager } from "./action";
-import assert from "assert";
+import { ReferenceManager } from "./reference";
 
 export async function runLspServer(
   config: Config,
@@ -50,6 +50,7 @@ export async function runLspServer(
     citationProvider,
     templateProvider
   );
+  const referenceManager = new ReferenceManager(config, documentProvider);
 
   const connection = createConnection(process.stdin, process.stdout);
   const documents = new TextDocuments(TextDocument);
@@ -133,25 +134,7 @@ export async function runLspServer(
     const textDocument = documents.get(params.textDocument.uri);
     if (textDocument == null) return null;
     const documentPath = url.fileURLToPath(textDocument.uri);
-    const locations: Location[] = [];
-
-    for (const doc of documentProvider.documents.values()) {
-      const links = markdown.filterElements((e) => {
-        if (e.type !== "inlineLink") return false;
-        if (e.path == null) return false;
-        return (
-          path.join(path.dirname(doc.filePath), e.path.content) === documentPath
-        );
-      }, doc.elements);
-      for (const link of links) {
-        locations.push({
-          range: { start: link.start, end: link.end },
-          uri: url.pathToFileURL(doc.filePath).toString(),
-        });
-      }
-    }
-
-    return locations;
+    return referenceManager.getReferencesToPath(documentPath);
   });
 
   connection.onCodeLens(async (params) => {
@@ -168,22 +151,7 @@ export async function runLspServer(
       document.elements
     );
 
-    const locations: Location[] = [];
-    for (const doc of documentProvider.documents.values()) {
-      const links = markdown.filterElements((e) => {
-        if (e.type !== "inlineLink") return false;
-        if (e.path == null) return false;
-        return (
-          path.join(path.dirname(doc.filePath), e.path.content) === documentPath
-        );
-      }, doc.elements);
-      for (const link of links) {
-        locations.push({
-          range: { start: link.start, end: link.end },
-          uri: url.pathToFileURL(doc.filePath).toString(),
-        });
-      }
-    }
+    const locations = referenceManager.getReferencesToPath(documentPath);
 
     if (locations.length === 0) return null;
 
@@ -205,10 +173,6 @@ export async function runLspServer(
     };
 
     return [lens];
-  });
-
-  connection.onCodeLensResolve(async (codeLens) => {
-    return codeLens;
   });
 
   connection.onCodeAction(async (params: CodeActionParams) => {
