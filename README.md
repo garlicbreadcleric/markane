@@ -121,11 +121,10 @@ citations:
   folders:
     - ./sources
 
-lsp:
-  # If true, the Markdown will be passed through Pandoc before showing in the
-  # preview on hover. This is useful to properly preview Pandoc-specific
-  # Markdown, i.e. citations, fenced divs etc.
-  pandocPreview: true
+# If true, the Markdown will be passed through Pandoc before showing in the
+# preview on hover. This is useful to properly preview Pandoc-specific
+# Markdown, i.e. citations, fenced divs etc.
+pandocPreview: true
 ```
 
 ## Issues and caveats
