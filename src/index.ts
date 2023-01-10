@@ -83,6 +83,9 @@ const cliParserOptions = {
     help: {
       description: "Show help message",
     },
+    version: {
+      description: "Show installed Markane version",
+    }
   },
 };
 
@@ -188,6 +191,9 @@ export async function main() {
       break;
     case "help":
       console.log(cliParser.help());
+      break;
+    case "version":
+      console.log((await import(`${__dirname}/../package.json`)).version);
       break;
   }
 }
