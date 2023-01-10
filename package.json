@@ -1,6 +1,6 @@
 {
   "name": "markane",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Arcane focus for Markdown spell-casting",
   "main": "index.js",
   "scripts": {
