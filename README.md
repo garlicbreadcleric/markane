@@ -26,19 +26,14 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 
 ## Installation
 
-**Note**: Currently you'll need to clone the repository manually, but Markane will be available on NPM soon.
-
 Requirements:
 
-- Git
 - Node.js (with npm or any other package manager)
 
 **To do**: Specify the minimal Node.js version.
 
 ```bash
-git clone https://github.com/garlicbreadcleric/markane
-cd markane
-sudo npm i -g
+sudo npm i -g markane
 ```
 
 ## Usage
@@ -132,10 +127,6 @@ pandocPreview: true
 ### Only inline links are currently supported
 
 Support for reference links is planned. I don't really want to support wiki-links because I try to stick with what Pandoc supports out of the box, syntax-wise. It is possible I will reconsider if there are enough requests, though.
-
-### Error handling
-
-Currently in some cases Markane will just throw plain Node.js stacktraces without any explanation. Proper error handling and config validation are both high on the TODO list.
 
 ### Performance
 

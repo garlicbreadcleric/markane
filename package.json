@@ -12,7 +12,7 @@
     "markane": "bin/markane.js"
   },
   "author": "",
-  "license": "ISC",
+  "license": "GPLv3",
   "dependencies": {
     "colors": "^1.4.0",
     "handlebars": "^4.7.7",
