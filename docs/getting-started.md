@@ -8,7 +8,7 @@ In order to start using Markane, you need to do a few things:
 2. Configure LSP integration for your editor (see [Editor integration](editor-integration.md)).
 3. Create `markane.yaml` configuration file in your workspace root.
 4. Create folders for your notes.
-   1. (Optional) Set up CSL JSON bibliography and connect it via `citations` section in `markane.yaml`. For example, if you use Zotero, you can set up CSL JSON export via [Better BibTex](https://retorque.re/zotero-better-bibtex/) Zotero plugin.
+5. (Optional) Set up CSL JSON bibliography and connect it via `citations` section in `markane.yaml`. For example, if you use Zotero, you can set up CSL JSON export via [Better BibTex](https://retorque.re/zotero-better-bibtex/) Zotero plugin.
 
 ## Configuration
 
