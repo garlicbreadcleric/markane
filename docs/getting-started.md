@@ -10,6 +10,8 @@ In order to start using Markane, you need to do a few things:
 4. Create folders for your notes.
 5. (Optional) Set up CSL JSON bibliography and connect it via `citations` section in `markane.yaml`. For example, if you use Zotero, you can set up CSL JSON export via [Better BibTex](https://retorque.re/zotero-better-bibtex/) Zotero plugin.
 
+Instead of writing a configuration file and adding templates and snippets from scratch, you can clone [Markane template](https://github.com/garlicbreadcleric/markane-template) repo. In this case you'll still need to follow the steps 1, 2 and 5 from the list above.
+
 ## Configuration
 
 Markane is configured via `markane.yaml` file in your workspace root.
