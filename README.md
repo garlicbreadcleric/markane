@@ -11,6 +11,7 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 - Auto-completion (links, citations, snippets)
 - Go-to-definition (links, citations)
 - Backlinks (links, citations)
+- Symbols (workspace-level, document-level)
 
 ## Documentation
 
@@ -81,6 +82,22 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 <summary>Citations</summary>
 
 ![](assets/reference-citation.gif)
+
+</details>
+
+### Symbols
+
+<details>
+<summary>Workspace</summary>
+
+![](assets/symbol-workspace.gif)
+
+</details>
+
+<details>
+<summary>Document</summary>
+
+![](assets/symbol-document.gif)
 
 </details>
 
