@@ -19,6 +19,8 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 - [Editor integration](docs/editor-integration.md)
 - [Template examples](docs/template-examples.md)
 
+See also: [Markane template](https://github.com/garlicbreadcleric/markane-template).
+
 ## Features
 
 ### Auto-completion
