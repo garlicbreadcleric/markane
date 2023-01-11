@@ -105,4 +105,4 @@ See also: [Markane template](https://github.com/garlicbreadcleric/markane-templa
 
 ## Similar projects
 
-- mickael-menu's [zk](https://github.com/mickael-menu/zk) — a similar tool with more focus on a powerful command-line interface and less focus on editor integration; supports `[[wiki-links]]` and has the ability to query notes from CLI.
+- mickael-menu's [zk](https://github.com/mickael-menu/zk) — a similar tool with a more powerful command-line interface. Supports `[[wiki-links]]` and `#hashtags` and has the ability to query notes from CLI; doesn't support `@citations` and `/snippets`.
