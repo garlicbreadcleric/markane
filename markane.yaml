@@ -1,0 +1,6 @@
+editor: codium
+
+folders:
+  - path: ./docs
+    type: note
+    file: '{{slug title}}.md'
