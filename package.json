@@ -1,9 +1,11 @@
 {
   "name": "markane",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Arcane focus for Markdown spell-casting",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
+    "prepublish": "npm ruh build",
     "build": "rm -rf ./dist && tsc",
     "buildDev": "rm -rf ./dist && tsc --sourceMap",
     "format": "fd '\\.ts$' src bin -x npx prettier -w"
@@ -12,7 +14,7 @@
     "markane": "bin/markane.js"
   },
   "author": "",
-  "license": "GPLv3",
+  "license": "GPL-3.0",
   "dependencies": {
     "colors": "^1.4.0",
     "handlebars": "^4.7.7",
