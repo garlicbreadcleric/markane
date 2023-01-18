@@ -85,7 +85,7 @@ const cliParserOptions = {
     },
     version: {
       description: "Show installed Markane version",
-    }
+    },
   },
 };
 

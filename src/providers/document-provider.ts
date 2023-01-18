@@ -21,11 +21,7 @@ export class DocumentProvider {
     const cwd = process.cwd();
 
     for (const folder of this.config.folders ?? []) {
-      if (folder.recursive) {
-        throw new Error("Recursive folders aren't implemented yet."); // TODO.
-      }
-
-      if (folder.type != "note") {
+      if ((folder.type ?? "note") != "note") {
         continue; // TODO.
       }
 
@@ -34,17 +30,9 @@ export class DocumentProvider {
       }
 
       const folderPath = path.resolve(cwd, folder.path);
-
-      const files = await new Promise<string[]>((resolve, reject) =>
-        fs.readdir(folderPath, (err, files) => {
-          if (err) reject(err);
-          else resolve(files);
-        })
-      ).then((files) =>
-        files
-          .filter((f) => path.extname(f) === ".md")
-          .map((f) => path.join(folderPath, f))
-      );
+      const files = (
+        await utils.readDirFiles(folderPath, folder.recursive ?? false)
+      ).filter((f) => path.extname(f) === ".md");
 
       for (const file of files) {
         await this.updateDocument(file);
