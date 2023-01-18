@@ -12,6 +12,16 @@ import { CitationProvider } from "./providers/citation-provider";
 import { TemplateProvider } from "./providers/template-provider";
 import { SnippetProvider } from "./providers/snippet-provider";
 
+export * from "./config";
+export * from "./logger";
+export * as markdown from "./markdown";
+export * as parsec from "./parsec";
+export * as pandoc from "./pandoc";
+export * from "./providers/document-provider";
+export * from "./providers/citation-provider";
+export * from "./providers/template-provider";
+export * from "./providers/snippet-provider";
+
 const cliParserOptions = {
   executableName: "markane",
   description: "Markane - Arcane focus for Markdown spell-casting",
