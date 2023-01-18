@@ -80,6 +80,36 @@ export async function readFile(filePath: string): Promise<Buffer> {
   );
 }
 
+export async function readDirFiles(
+  dirPath: string,
+  recursive: boolean = false,
+  files: string[] = []
+) {
+  const children = await new Promise<string[]>((resolve, reject) => {
+    fs.readdir(dirPath, (err, files) => {
+      if (err) reject(err);
+      else resolve(files);
+    });
+  });
+
+  for (const child of children) {
+    const stats = await new Promise<fs.Stats>((resolve, reject) => {
+      fs.stat(path.join(dirPath, child), (err, stats) => {
+        if (err) reject(err);
+        else resolve(stats);
+      });
+    });
+
+    if (stats.isFile()) {
+      files.push(path.join(dirPath, child));
+    } else if (stats.isDirectory() && recursive) {
+      await readDirFiles(path.join(dirPath, child), recursive, files);
+    }
+  }
+
+  return files;
+}
+
 export async function writeFile(
   filePath: string,
   data: string | NodeJS.ArrayBufferView

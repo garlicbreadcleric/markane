@@ -97,6 +97,7 @@ export async function runLspServer(
       }
 
       if (change.type === FileChangeType.Deleted) {
+        console.error(change.uri);
         await documentProvider.deleteDocument(url.fileURLToPath(change.uri));
       }
     }
