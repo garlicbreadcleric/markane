@@ -1,6 +1,6 @@
 {
   "name": "markane",
-  "version": "0.0.4",
+  "version": "0.0.6",
   "description": "Arcane focus for Markdown spell-casting",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

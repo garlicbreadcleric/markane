@@ -73,7 +73,7 @@ export async function runLspServer(
           resolveProvider: false,
         },
         executeCommandProvider: {
-          commands: ["markane/showReferences"],
+          commands: ["markane/showReferences", "markane/showMentions"],
         },
       },
     };
@@ -152,9 +152,9 @@ export async function runLspServer(
       document.elements
     );
 
-    const locations = referenceManager.getReferencesToPath(documentPath);
-
-    if (locations.length === 0) return null;
+    const referencesLocations =
+      referenceManager.getReferencesToPath(documentPath);
+    const mentionsLocations = referenceManager.getMentions(documents, document);
 
     const range =
       heading == null
@@ -162,18 +162,30 @@ export async function runLspServer(
         : { start: heading.start, end: heading.end };
     const position = range.start;
 
-    const lens: CodeLens = {
+    const referencesLens: CodeLens = {
       command: {
         command: "markane/showReferences",
         title:
-          `${locations.length} ` +
-          (locations.length === 1 ? "reference" : "references"),
-        arguments: [params.textDocument.uri, position, locations],
+          `${referencesLocations.length} ` +
+          (referencesLocations.length === 1 ? "reference" : "references"),
+        arguments: [params.textDocument.uri, position, referencesLocations],
       },
       range,
     };
 
-    return [lens];
+    // TODO: Allow to disable via `markane.yaml`.
+    const mentionsLens: CodeLens = {
+      command: {
+        command: "markane/showMentions",
+        title:
+          `${mentionsLocations.length} ` +
+          (mentionsLocations.length === 1 ? "mention" : "mentions"),
+        arguments: [params.textDocument.uri, position, mentionsLocations],
+      },
+      range,
+    };
+
+    return [referencesLens, mentionsLens];
   });
 
   connection.onCodeAction(async (params: CodeActionParams) => {
@@ -301,7 +313,8 @@ export async function runLspServer(
 
   connection.onExecuteCommand(async (params) => {
     switch (params.command) {
-      case "markane/showReferences": {
+      case "markane/showReferences":
+      case "markane/showMentions": {
         const uri = params.arguments?.at(0);
         const position = params.arguments?.at(1);
         const locations = params.arguments?.at(2);
