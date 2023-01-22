@@ -143,3 +143,21 @@ export async function execCommand(cmd: string): Promise<void> {
     });
   });
 }
+
+export function findIndicesOf(substr: string, str: string) {
+  const substrLen = substr.length;
+  if (substrLen == 0) {
+    return [];
+  }
+  let startIndex = 0,
+    index,
+    indices = [];
+  str = str.toLowerCase();
+  substr = substr.toLowerCase();
+
+  while ((index = str.indexOf(substr, startIndex)) > -1) {
+    indices.push(index);
+    startIndex = index + substrLen;
+  }
+  return indices;
+}
