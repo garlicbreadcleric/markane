@@ -12,4 +12,4 @@ Other extensions recommended to use with Markane:
 - [Markdown Link Updater](https://github.com/mathiassoeholm/markdown-link-updater) for updating link paths on file renames.
 - [Markdown Paste](https://github.com/telesoho/vscode-markdown-paste-image) for pasting images from clipboard.
 
-Personally, I've disabled all the built-in Markdown support in VS Code (`vscode.markdown` and `vscode.markdown-language-features`) as the above extensions replicate all the features from them that I need, but that is not necessary to use Markane. If you want to disable built-in extensions, you can find them by entering `@builtin: markdown` in the extensions search.
+Personally, I've disabled all the built-in Markdown support in VS Code (`vscode.markdown` and `vscode.markdown-language-features`) as the above extensions replicate all the features from them that I need, but that is not necessary to use Markane. If you want to disable built-in extensions, you can find them by entering `@builtin markdown` in the extensions search.
