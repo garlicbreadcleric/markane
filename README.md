@@ -12,7 +12,7 @@ Markane is a command-line tool for taking Markdown notes and navigating between 
 - Go-to-definition (links, citations)
 - Backlinks (links, citations)
 - Symbols (workspace-level, document-level)
-- Beta: Unlinked mentions
+- **\[Beta\]** Unlinked mentions
 
 ## Documentation
 

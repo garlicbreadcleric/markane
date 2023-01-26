@@ -14,7 +14,7 @@ Other extensions recommended to use with Markane:
 
 Personally, I've disabled all the built-in Markdown support in VS Code (`vscode.markdown` and `vscode.markdown-language-features`) as the above extensions replicate all the features from them that I need, but that is not necessary to use Markane. If you want to disable built-in extensions, you can find them by entering `@builtin markdown` in the extensions search.
 
-## NeoVim (Beta)
+## \[Beta\] NeoVim
 
 Requirements:
 
