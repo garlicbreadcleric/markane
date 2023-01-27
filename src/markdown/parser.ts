@@ -23,9 +23,11 @@ import { documentPreview } from "./preview";
 
 const fmDashes = parsec.scopedP("text.html.markdown").check((t) => t.content === "---");
 
-const parseFrontmatter: parsec.Parser<MarkdownFrontmatter> = parsec.P.bind_("fmBegin", fmDashes)
-  .bind_("fmTokens", parsec.scopedP("meta.embedded.block.frontmatter").many())
-  .bind_("fmEnd", fmDashes)
+const parseFrontmatter: parsec.Parser<MarkdownFrontmatter> = parsec
+  .P()
+  .bind("fmBegin", fmDashes)
+  .bind("fmTokens", parsec.scopedP("meta.embedded.block.frontmatter").many())
+  .bind("fmEnd", fmDashes)
   .do(({ fmBegin, fmTokens, fmEnd }) => {
     const allTokens = [fmBegin, ...fmTokens, fmEnd];
     const content = getTokensContent(allTokens);
@@ -44,8 +46,7 @@ const parseFrontmatter: parsec.Parser<MarkdownFrontmatter> = parsec.P.bind_("fmB
     } catch (e: any) {
       return parsec.Parser.fail<MarkdownFrontmatter>(e.toString());
     }
-  })
-  .makeParser({});
+  }).valueParser;
 
 export const parseComment: parsec.Parser<MarkdownComment> = parsec
   .scopedP("comment.block.html")
@@ -61,18 +62,17 @@ export const parseComment: parsec.Parser<MarkdownComment> = parsec
     };
   });
 
-export const parseInlineLink: parsec.Parser<MarkdownInlineLink> = parsec.P.bind_(
-  "titleBegin",
-  parsec.scopedP(["punctuation.definition.link.title.begin.markdown", "meta.link.inline.markdown"])
-)
-  .bind_("titleTokens", parsec.scopedP("string.other.link.title.markdown").many())
-  .bind_("titleEnd", parsec.scopedP("punctuation.definition.link.title.end.markdown"))
-  .bind_(
+export const parseInlineLink: parsec.Parser<MarkdownInlineLink> = parsec
+  .P()
+  .bind("titleBegin", parsec.scopedP(["punctuation.definition.link.title.begin.markdown", "meta.link.inline.markdown"]))
+  .bind("titleTokens", parsec.scopedP("string.other.link.title.markdown").many())
+  .bind("titleEnd", parsec.scopedP("punctuation.definition.link.title.end.markdown"))
+  .bind(
     "pathBegin",
     parsec.scopedP("punctuation.definition.metadata.markdown").check((t) => t.content === "(")
   )
-  .bind_("pathTokens", parsec.scopedP("markup.underline.link.markdown").many())
-  .bind_(
+  .bind("pathTokens", parsec.scopedP("markup.underline.link.markdown").many())
+  .bind(
     "pathEnd",
     parsec.scopedP("punctuation.definition.metadata.markdown").check((t) => t.content === ")")
   )
@@ -102,21 +102,22 @@ export const parseInlineLink: parsec.Parser<MarkdownInlineLink> = parsec.P.bind_
       title,
       path,
     });
-  })
-  .makeParser({});
+  }).valueParser;
 
-export const parseShortReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.P.bind_(
-  "refBegin",
-  parsec.scopedP(["punctuation.definition.link.title.begin.markdown", "meta.link.reference.markdown"])
-)
-  .bind_(
+export const parseShortReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec
+  .P()
+  .bind(
+    "refBegin",
+    parsec.scopedP(["punctuation.definition.link.title.begin.markdown", "meta.link.reference.markdown"])
+  )
+  .bind(
     "refTokens",
     parsec
       .scopedP("meta.link.reference.markdown")
       .check(notPredicate(hasScope("punctuation.definition.link.title.end.markdown")))
       .many()
   )
-  .bind_("refEnd", parsec.scopedP("punctuation.definition.link.title.end.markdown"))
+  .bind("refEnd", parsec.scopedP("punctuation.definition.link.title.end.markdown"))
 
   .do(({ refBegin, refTokens, refEnd }) => {
     const allTokens = [refBegin, ...refTokens, refEnd];
@@ -134,30 +135,31 @@ export const parseShortReferenceLink: parsec.Parser<MarkdownReferenceLink> = par
       reference,
       title: null,
     });
-  })
-  .makeParser({});
+  }).valueParser;
 
-export const parseFullReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.P.bind_(
-  "titleBegin",
-  parsec.scopedP(["punctuation.definition.link.title.begin.markdown", "meta.link.reference.markdown"])
-)
-  .bind_(
+export const parseFullReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec
+  .P()
+  .bind(
+    "titleBegin",
+    parsec.scopedP(["punctuation.definition.link.title.begin.markdown", "meta.link.reference.markdown"])
+  )
+  .bind(
     "titleTokens",
     parsec
       .scopedP("meta.link.reference.markdown")
       .check(notPredicate(hasScope("punctuation.definition.link.title.end.markdown")))
       .many()
   )
-  .bind_("titleEnd", parsec.scopedP("punctuation.definition.link.title.end.markdown"))
-  .bind_("refBegin", parsec.scopedP(["meta.link.reference.markdown", "punctuation.definition.constant.begin.markdown"]))
-  .bind_(
+  .bind("titleEnd", parsec.scopedP("punctuation.definition.link.title.end.markdown"))
+  .bind("refBegin", parsec.scopedP(["meta.link.reference.markdown", "punctuation.definition.constant.begin.markdown"]))
+  .bind(
     "refTokens",
     parsec
       .scopedP(["meta.link.reference.markdown", "constant.other.reference.link.markdown"])
       .check(notPredicate(hasScope("punctuation.definition.constant.end.markdown")))
       .many()
   )
-  .bind_("refEnd", parsec.scopedP("punctuation.definition.constant.end.markdown"))
+  .bind("refEnd", parsec.scopedP("punctuation.definition.constant.end.markdown"))
 
   .do(({ titleBegin, titleTokens, titleEnd, refBegin, refTokens, refEnd }) => {
     const allTokens = [titleBegin, ...titleTokens, titleEnd, refBegin, ...refTokens, refEnd];
@@ -175,8 +177,7 @@ export const parseFullReferenceLink: parsec.Parser<MarkdownReferenceLink> = pars
       reference,
       title,
     });
-  })
-  .makeParser({});
+  }).valueParser;
 
 export const parseReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.oneOfP([
   parseFullReferenceLink,
