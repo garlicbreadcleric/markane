@@ -68,10 +68,7 @@ export class Tokenizer {
   constructor() {
     const self = this;
     const wasmBin = fs.readFileSync(
-      path.join(
-        __dirname,
-        "../../node_modules/vscode-oniguruma/release/onig.wasm"
-      )
+      path.join(__dirname, "../../node_modules/vscode-oniguruma/release/onig.wasm")
     ).buffer;
 
     const vscodeOnigurumaLib = oniguruma.loadWASM(wasmBin).then(() => {
@@ -97,9 +94,7 @@ export class Tokenizer {
         };
 
         if (scopeMap[scopeName] != null) {
-          return self.parseGrammarFromFile(
-            `../../syntaxes/${scopeMap[scopeName]}.tmLanguage.json`
-          );
+          return self.parseGrammarFromFile(`../../syntaxes/${scopeMap[scopeName]}.tmLanguage.json`);
         }
         return null;
       },
@@ -125,20 +120,14 @@ export class Tokenizer {
     return grammar;
   }
 
-  async tokenize(
-    scopeName: string,
-    text: string | string[]
-  ): Promise<Token[][]> {
+  async tokenize(scopeName: string, text: string | string[]): Promise<Token[][]> {
     const grammar = await this.loadGrammar(scopeName);
 
     let ruleStack = vsctm.INITIAL;
     const lines = text instanceof Array ? text : text.split("\n");
 
     return lines.map((line, i) => {
-      const { tokens, ruleStack: ruleStack1 } = grammar.tokenizeLine(
-        line,
-        ruleStack
-      );
+      const { tokens, ruleStack: ruleStack1 } = grammar.tokenizeLine(line, ruleStack);
       ruleStack = ruleStack1;
 
       return tokens.map((token) => ({

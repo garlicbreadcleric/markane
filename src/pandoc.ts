@@ -17,10 +17,7 @@ export type PandocOptions = {
   };
 };
 
-export async function convert(
-  input: string,
-  options: Partial<PandocOptions>
-): Promise<string> {
+export async function convert(input: string, options: Partial<PandocOptions>): Promise<string> {
   const o: PandocOptions = Object.assign(
     {
       from: { name: "markdown", enabledExtensions: [], disabledExtensions: [] },
@@ -34,13 +31,13 @@ export async function convert(
 
   const args = [
     "--from",
-    `${o.from.name}${o.from.enabledExtensions
-      .map((e) => "+" + e)
-      .join("")}${o.from.disabledExtensions.map((e) => "-" + e).join("")}`,
+    `${o.from.name}${o.from.enabledExtensions.map((e) => "+" + e).join("")}${o.from.disabledExtensions
+      .map((e) => "-" + e)
+      .join("")}`,
     "--to",
-    `${o.to.name}${o.to.enabledExtensions
-      .map((e) => "+" + e)
-      .join("")}${o.to.disabledExtensions.map((e) => "-" + e).join("")}`,
+    `${o.to.name}${o.to.enabledExtensions.map((e) => "+" + e).join("")}${o.to.disabledExtensions
+      .map((e) => "-" + e)
+      .join("")}`,
   ];
   if (o.citeproc) {
     args.push("-C");
@@ -55,17 +52,13 @@ export async function convert(
   }
 
   return await new Promise((resolve, reject) => {
-    const p = exec(
-      `pandoc ${args.join(" ")}`,
-      { cwd: o.cwd },
-      (err, stdout, stderr) => {
-        if (err) {
-          console.error(stderr);
-          reject(err);
-        }
-        resolve(stdout);
+    const p = exec(`pandoc ${args.join(" ")}`, { cwd: o.cwd }, (err, stdout, stderr) => {
+      if (err) {
+        console.error(stderr);
+        reject(err);
       }
-    );
+      resolve(stdout);
+    });
     p.stdin?.setDefaultEncoding("utf-8");
     p.stdin?.write(input);
     p.stdin?.end();

@@ -22,56 +22,32 @@ export type MarkdownHeadingTree = {
 }[];
 
 export class SymbolManager {
-  constructor(
-    protected config: Config,
-    protected documentProvider: DocumentProvider
-  ) {}
+  constructor(protected config: Config, protected documentProvider: DocumentProvider) {}
 
-  async onWorkspaceSymbol(
-    params: WorkspaceSymbolParams
-  ): Promise<WorkspaceSymbol[]> {
-    return Array.from(this.documentProvider.documents.values()).map(
-      (document) => {
-        const heading = markdown.findElement(
-          (e) => e.type === "heading" && e.level === 1,
-          document.elements
-        );
+  async onWorkspaceSymbol(params: WorkspaceSymbolParams): Promise<WorkspaceSymbol[]> {
+    return Array.from(this.documentProvider.documents.values()).map((document) => {
+      const heading = markdown.findElement((e) => e.type === "heading" && e.level === 1, document.elements);
 
-        const range =
-          heading == null
-            ? Range.create(Position.create(0, 0), Position.create(0, 0))
-            : heading;
+      const range = heading == null ? Range.create(Position.create(0, 0), Position.create(0, 0)) : heading;
 
-        const filePath = path.relative(process.cwd(), document.filePath);
+      const filePath = path.relative(process.cwd(), document.filePath);
 
-        return {
-          name:
-            document.title != null
-              ? `${document.title}  ${filePath}`
-              : filePath,
-          kind: SymbolKind.File,
-          location: {
-            uri: url.pathToFileURL(document.filePath).toString(),
-            range,
-          },
-        };
-      }
-    );
+      return {
+        name: document.title != null ? `${document.title}  ${filePath}` : filePath,
+        kind: SymbolKind.File,
+        location: {
+          uri: url.pathToFileURL(document.filePath).toString(),
+          range,
+        },
+      };
+    });
   }
 
-  async onDocumentSymbol(
-    params: DocumentSymbolParams,
-    textDocument: TextDocument
-  ): Promise<DocumentSymbol[]> {
+  async onDocumentSymbol(params: DocumentSymbolParams, textDocument: TextDocument): Promise<DocumentSymbol[]> {
     const src = textDocument.getText();
-    const document = await this.documentProvider.getDocumentBySrc(
-      url.fileURLToPath(textDocument.uri),
-      src
-    );
+    const document = await this.documentProvider.getDocumentBySrc(url.fileURLToPath(textDocument.uri), src);
 
-    const headings = <MarkdownHeading[]>(
-      markdown.filterElements((e) => e.type === "heading", document.elements)
-    );
+    const headings = <MarkdownHeading[]>markdown.filterElements((e) => e.type === "heading", document.elements);
     const headingTree = this.headingListToTree(headings);
 
     return this.headingTreeToSymbolList(headingTree);
@@ -82,11 +58,7 @@ export class SymbolManager {
 
     for (const heading of headings) {
       let target = roots;
-      while (
-        target != null &&
-        target.length > 0 &&
-        target[target.length - 1].heading.level < heading.level
-      ) {
+      while (target != null && target.length > 0 && target[target.length - 1].heading.level < heading.level) {
         target = target[target.length - 1].children;
       }
       target.push({ heading, children: [] });

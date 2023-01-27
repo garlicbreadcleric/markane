@@ -65,9 +65,7 @@ export class CliParser {
           process.exit(1);
         }
         if (option.type !== "flag") {
-          this.logger.error(
-            `Option --${optionName} is not a flag and can't be negated.`
-          );
+          this.logger.error(`Option --${optionName} is not a flag and can't be negated.`);
         }
         result.options[optionName] = false;
       } else if (arg.slice(0, 2) === "--") {
@@ -82,9 +80,7 @@ export class CliParser {
         } else {
           i++;
           if (i >= argv.length) {
-            this.logger.error(
-              `Option ${arg} is not a flag, a value must be provided.`
-            );
+            this.logger.error(`Option ${arg} is not a flag, a value must be provided.`);
             process.exit(1);
           }
 
@@ -99,10 +95,7 @@ export class CliParser {
         }
       } else if (arg.length === 2 && arg[0] === "-") {
         const optionShortName = arg[1];
-        const optionName = this.getOptionNameByShortName(
-          optionShortName,
-          command
-        );
+        const optionName = this.getOptionNameByShortName(optionShortName, command);
         if (optionName == null) {
           this.logger.error(`Unknown option ${arg} of command ${argv[0]}.`);
           process.exit(1);
@@ -113,9 +106,7 @@ export class CliParser {
         } else {
           i++;
           if (i >= argv.length) {
-            this.logger.error(
-              `Option ${arg} is not a flag, a value must be provided.`
-            );
+            this.logger.error(`Option ${arg} is not a flag, a value must be provided.`);
             process.exit(1);
           }
 
@@ -153,9 +144,7 @@ export class CliParser {
   getCommand(commandName: string) {
     const command = this.options.commands[commandName];
     if (command == null) {
-      this.logger.error(
-        `Unknown command ${commandName}\n\n${this.help(false)}.`
-      );
+      this.logger.error(`Unknown command ${commandName}\n\n${this.help(false)}.`);
       process.exit(1);
     }
     return command;
@@ -164,8 +153,7 @@ export class CliParser {
   getOptionNameByShortName(optionShortName: string, command: CliCommand) {
     const optionNames = Object.keys(command.options ?? {});
     for (const optionName of optionNames) {
-      if ((command.options ?? {})[optionName].short === optionShortName)
-        return optionName;
+      if ((command.options ?? {})[optionName].short === optionShortName) return optionName;
     }
     return null;
   }
@@ -190,10 +178,7 @@ export class CliParser {
         output += "\n\n";
         const optionNames = Object.keys(command.options);
 
-        const longestOptionNameLength = optionNames.reduce(
-          (l, n) => (n.length > l ? n.length : l),
-          0
-        );
+        const longestOptionNameLength = optionNames.reduce((l, n) => (n.length > l ? n.length : l), 0);
 
         for (let j = 0; j < optionNames.length; j++) {
           const optionName = optionNames[j];
@@ -207,10 +192,8 @@ export class CliParser {
 
           let comment = [];
           if (option.type != null) comment.push(`type: ${option.type}`);
-          if (option.oneOf != null)
-            comment.push(`values: ${option.oneOf.join(", ")}`);
-          if (Object.keys(option).includes("default"))
-            comment.push(`default: ${option.default}`);
+          if (option.oneOf != null) comment.push(`values: ${option.oneOf.join(", ")}`);
+          if (Object.keys(option).includes("default")) comment.push(`default: ${option.default}`);
           if (comment.length > 0) output += ` [${comment.join("; ")}]`;
 
           if (option.type === "flag") {

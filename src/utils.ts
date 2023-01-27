@@ -80,11 +80,7 @@ export async function readFile(filePath: string): Promise<Buffer> {
   );
 }
 
-export async function readDirFiles(
-  dirPath: string,
-  recursive: boolean = false,
-  files: string[] = []
-) {
+export async function readDirFiles(dirPath: string, recursive: boolean = false, files: string[] = []) {
   const children = await new Promise<string[]>((resolve, reject) => {
     fs.readdir(dirPath, (err, files) => {
       if (err) reject(err);
@@ -110,10 +106,7 @@ export async function readDirFiles(
   return files;
 }
 
-export async function writeFile(
-  filePath: string,
-  data: string | NodeJS.ArrayBufferView
-): Promise<void> {
+export async function writeFile(filePath: string, data: string | NodeJS.ArrayBufferView): Promise<void> {
   return await new Promise((resolve, reject) =>
     fs.writeFile(filePath, data, (err) => {
       if (err) reject(err);

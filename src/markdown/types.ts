@@ -1,21 +1,12 @@
 import { Predicate } from "../utils";
 import { isWithinRange, Position } from "../parsec/position";
-import {
-  getTokensContent,
-  getTokensRange,
-  HasRange,
-  Token,
-} from "../parsec/tokenizer";
+import { getTokensContent, getTokensRange, HasRange, Token } from "../parsec/tokenizer";
 
 export type MarkdownElementBase = HasRange & {
   content: string;
 };
 
-export type MarkdownInlineElement =
-  | MarkdownInlineLink
-  | MarkdownReferenceLink
-  | MarkdownInlineImage
-  | MarkdownCitation;
+export type MarkdownInlineElement = MarkdownInlineLink | MarkdownReferenceLink | MarkdownInlineImage | MarkdownCitation;
 
 export type MarkdownHeading = MarkdownElementBase & {
   type: "heading";
@@ -112,10 +103,7 @@ export function getElementChildren(e: MarkdownElement): MarkdownElement[] {
 
 export type FoldState<T> = { acc: T; isFinished?: boolean };
 
-export type Folder<TAcc, TValue> = (
-  acc: TAcc,
-  element: TValue
-) => FoldState<TAcc>;
+export type Folder<TAcc, TValue> = (acc: TAcc, element: TValue) => FoldState<TAcc>;
 
 export function foldElements<T>(
   f: Folder<T, MarkdownElement>,
@@ -136,15 +124,8 @@ export function foldElements<T>(
   return acc;
 }
 
-export function mapElements<T>(
-  f: (element: MarkdownElement) => T,
-  elements: MarkdownElement | MarkdownElement[]
-): T[] {
-  return foldElements(
-    (acc: T[], element) => ({ acc: acc.concat([f(element)]) }),
-    [],
-    elements
-  );
+export function mapElements<T>(f: (element: MarkdownElement) => T, elements: MarkdownElement | MarkdownElement[]): T[] {
+  return foldElements((acc: T[], element) => ({ acc: acc.concat([f(element)]) }), [], elements);
 }
 
 export function filterElements(
@@ -172,9 +153,7 @@ export function findElement(
   );
 }
 
-export function elementBaseFromTokens(
-  tokens: Token[] | null
-): MarkdownElementBase | null {
+export function elementBaseFromTokens(tokens: Token[] | null): MarkdownElementBase | null {
   if (tokens == null || tokens.length === 0) return null;
   const { start, end } = getTokensRange(tokens)!;
   const content = getTokensContent(tokens);
@@ -191,13 +170,11 @@ export function trimElement(e: MarkdownElementBase): MarkdownElementBase {
     content: e.content.trim(),
     start: {
       line: e.start.line,
-      character:
-        e.start.character + (e.content.length - e.content.trimStart().length),
+      character: e.start.character + (e.content.length - e.content.trimStart().length),
     },
     end: {
       line: e.end.line,
-      character:
-        e.end.character - (e.content.length - e.content.trimEnd().length),
+      character: e.end.character - (e.content.length - e.content.trimEnd().length),
     },
   };
 }
@@ -217,9 +194,6 @@ export function getElementAt(
   return parent;
 }
 
-export function getElementsAt(
-  elements: MarkdownElement[],
-  pos: Position
-): MarkdownElement[] {
+export function getElementsAt(elements: MarkdownElement[], pos: Position): MarkdownElement[] {
   return filterElements((e) => isWithinRange(pos, e), elements);
 }

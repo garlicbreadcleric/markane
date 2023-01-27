@@ -87,10 +87,7 @@ export class CompletionManager {
     textDocument: TextDocument
   ): Promise<CompletionItem[] | CompletionList | null> {
     const src = textDocument.getText();
-    const doc = await this.documentProvider.getDocumentBySrc(
-      url.fileURLToPath(params.textDocument.uri),
-      src
-    );
+    const doc = await this.documentProvider.getDocumentBySrc(url.fileURLToPath(params.textDocument.uri), src);
 
     if (params.context?.triggerCharacter === "/") {
       return await this.onSnippetCompletion(params, textDocument, doc);
@@ -110,11 +107,7 @@ export class CompletionManager {
       return await this.onCitationCompletion(params, textDocument);
     }
 
-    const surroundingLinkRange = await this.getSurroundingLinkRange(
-      params.position,
-      textDocument,
-      element
-    );
+    const surroundingLinkRange = await this.getSurroundingLinkRange(params.position, textDocument, element);
     if (
       (params.context?.triggerKind === CompletionTriggerKind.TriggerCharacter &&
         params.context?.triggerCharacter === "[" &&
@@ -137,21 +130,14 @@ export class CompletionManager {
     let isIncomplete = false;
 
     for (const d of this.documentProvider.documents.values()) {
-      const relativePath = path.relative(
-        path.dirname(doc.filePath),
-        d.filePath
-      );
+      const relativePath = path.relative(path.dirname(doc.filePath), d.filePath);
 
-      const link =
-        d.title == null ? `](${relativePath})` : `${d.title}](${relativePath})`;
+      const link = d.title == null ? `](${relativePath})` : `${d.title}](${relativePath})`;
 
       const item: CompletionItem = {
         label: path.basename(d.filePath),
         detail: d.title,
-        filterText:
-          d.title == null
-            ? path.basename(d.filePath)
-            : `${d.title} ${path.basename(d.filePath)}`,
+        filterText: d.title == null ? path.basename(d.filePath) : `${d.title} ${path.basename(d.filePath)}`,
         sortText: d.filePath,
         kind: CompletionItemKind.File,
         additionalTextEdits: [],
@@ -181,12 +167,7 @@ export class CompletionManager {
       );
 
       if (surroundingRange != null) {
-        item.additionalTextEdits!.push(
-          TextEdit.replace(
-            Range.create(surroundingRange.start, params.position),
-            "["
-          )
-        );
+        item.additionalTextEdits!.push(TextEdit.replace(Range.create(surroundingRange.start, params.position), "["));
       }
 
       items.push(item);
@@ -233,10 +214,7 @@ export class CompletionManager {
     });
   }
 
-  async onCitationCompletion(
-    params: CompletionParams,
-    textDocument: TextDocument
-  ): Promise<CompletionItem[] | null> {
+  async onCitationCompletion(params: CompletionParams, textDocument: TextDocument): Promise<CompletionItem[] | null> {
     return this.citationProvider.bibliography.map((entry) => {
       return {
         label: entry["citation-key"],
@@ -249,9 +227,7 @@ export class CompletionManager {
 
   async onCompletionResolve(item: CompletionItem): Promise<CompletionItem> {
     if (item.data?.type === "link") {
-      const document = await this.documentProvider.getDocumentByPath(
-        item.data.filePath
-      );
+      const document = await this.documentProvider.getDocumentByPath(item.data.filePath);
       if (document == null) return item;
       await this.documentProvider.updateDocumentPreview(document);
       if (document.preview != null) {
