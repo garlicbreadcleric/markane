@@ -113,6 +113,54 @@ export class Parser<T> {
   }
 }
 
+class ParserComputation<TScopeIn, TScopeOut, TValue> {
+  public constructor(protected readonly parserFn: (scope: TScopeIn) => Parser<{ value: TValue; scope: TScopeOut }>) {}
+
+  public bind<TName extends string, TValue2>(
+    name: TName,
+    f: (scope: TScopeOut) => Parser<TValue2>
+  ): ParserComputation<TScopeIn, TScopeOut & { [x in TName]: TValue2 }, TValue2> {
+    return new ParserComputation((scope) => {
+      return this.parserFn(scope).chain(
+        (previousResult) =>
+          new Parser((state) => {
+            const result = f(previousResult.scope).run(state);
+            if (result.status !== ParserStatus.Ok) {
+              return result;
+            }
+            const newScope = <any>Object.assign({ [name]: result.value }, previousResult.scope);
+            return { status: result.status, state: result.state, value: { value: result.value, scope: newScope } };
+          })
+      );
+    });
+  }
+
+  public bind_<TName extends string, TValue2>(
+    name: TName,
+    p: Parser<TValue2>
+  ): ParserComputation<TScopeIn, TScopeOut & { [x in TName]: TValue2 }, TValue2> {
+    return this.bind(name, () => p);
+  }
+
+  public do<TValue2>(f: (scope: TScopeOut) => Parser<TValue2>): ParserComputation<TScopeIn, TScopeOut, TValue2> {
+    return new ParserComputation((scope) =>
+      this.parserFn(scope).chain((previousResult) =>
+        f(previousResult.scope).map((value) => ({ value, scope: previousResult.scope }))
+      )
+    );
+  }
+
+  public do_<TValue2>(p: Parser<TValue2>): ParserComputation<TScopeIn, TScopeOut, TValue2> {
+    return this.do(() => p);
+  }
+
+  public makeParser(initialScope: TScopeIn): Parser<TValue> {
+    return this.parserFn(initialScope).map(({ value }) => value);
+  }
+}
+
+export const P = new ParserComputation<{}, {}, null>(() => Parser.pure({ scope: {}, value: null }));
+
 export const anyP: Parser<Token> = new Parser((state: ParserState) => {
   if (state.offset < state.tokens.length) {
     return {
@@ -135,9 +183,7 @@ export const eofP: Parser<null> = new Parser((state: ParserState) => {
   if (state.offset < state.tokens.length) {
     return {
       status: ParserStatus.Error,
-      message: `Expected end of input, instead got ${
-        state.tokens[state.offset].content
-      }`,
+      message: `Expected end of input, instead got ${state.tokens[state.offset].content}`,
     };
   }
 
@@ -148,10 +194,7 @@ export const eofP: Parser<null> = new Parser((state: ParserState) => {
   };
 });
 
-export function condP(
-  pred: (token: Token) => boolean,
-  errorMessage?: string
-): Parser<Token> {
+export function condP(pred: (token: Token) => boolean, errorMessage?: string): Parser<Token> {
   return anyP.chain((t) => {
     if (pred(t)) {
       return Parser.pure(t);
@@ -164,10 +207,7 @@ export function tryP<T>(p: Parser<T>): Parser<T | null> {
   return tryWithDefaultP(p, null);
 }
 
-export function tryWithDefaultP<T, TDefault>(
-  p: Parser<T>,
-  def: TDefault
-): Parser<T | TDefault> {
+export function tryWithDefaultP<T, TDefault>(p: Parser<T>, def: TDefault): Parser<T | TDefault> {
   return new Parser((state: ParserState): ParserResult<T | TDefault> => {
     const result = p.run(state);
     if (result.status === ParserStatus.Ok) {
@@ -253,10 +293,7 @@ export function manyP<T>(p: Parser<T>): Parser<T[]> {
   });
 }
 
-export function manyWithComebackP<T, TComeback>(
-  p: Parser<T>,
-  comeback: Parser<TComeback>
-) {
+export function manyWithComebackP<T, TComeback>(p: Parser<T>, comeback: Parser<TComeback>) {
   return new Parser((state: ParserState) => {
     const result = [];
     let currentState = state;
@@ -353,10 +390,7 @@ export function manyWithAccAndComebackP<TValue, TComeback, TAcc>(
   });
 }
 
-export function joinP<TValue, TSep>(
-  p: Parser<TValue>,
-  pSep: Parser<TSep>
-): Parser<TValue[]> {
+export function joinP<TValue, TSep>(p: Parser<TValue>, pSep: Parser<TSep>): Parser<TValue[]> {
   return p.chain((v) =>
     pSep
       .chain(() => p)
@@ -409,10 +443,7 @@ export function flatSeqP<T>(parsers: Parser<T[]>[]): Parser<T[]> {
   });
 }
 
-export function check<T>(
-  pred: (t: T) => boolean,
-  messageFn?: (t: T) => string
-): (p: Parser<T>) => Parser<T> {
+export function check<T>(pred: (t: T) => boolean, messageFn?: (t: T) => string): (p: Parser<T>) => Parser<T> {
   return (p: Parser<T>) =>
     p.chain(
       (t) =>
@@ -442,10 +473,7 @@ export enum ScopedMode {
   Or = "Or",
 }
 
-export function scopedP(
-  scopes: TokenScope | TokenScope[],
-  mode: ScopedMode = ScopedMode.And
-) {
+export function scopedP(scopes: TokenScope | TokenScope[], mode: ScopedMode = ScopedMode.And) {
   return condP((t) => {
     if (!(scopes instanceof Array)) {
       scopes = [scopes];
@@ -490,38 +518,18 @@ export const lastRange: Parser<Range> = new Parser((state: ParserState) => {
   };
 });
 
-export const currentStartPosition: Parser<Position> = currentRange.map(
-  (r) => r.start
-);
-export const currentEndPosition: Parser<Position> = currentRange.map(
-  (r) => r.end
-);
+export const currentStartPosition: Parser<Position> = currentRange.map((r) => r.start);
+export const currentEndPosition: Parser<Position> = currentRange.map((r) => r.end);
 
-export const lastStartPosition: Parser<Position> = lastRange.map(
-  (r) => r.start
-);
+export const lastStartPosition: Parser<Position> = lastRange.map((r) => r.start);
 export const lastEndPosition: Parser<Position> = lastRange.map((r) => r.end);
 
-export const currentStartLine: Parser<number> = currentStartPosition.map(
-  (p) => p.line
-);
-export const currentStartCharacter: Parser<number> = currentStartPosition.map(
-  (p) => p.character
-);
-export const currentEndLine: Parser<number> = currentEndPosition.map(
-  (p) => p.line
-);
-export const currentEndCharacter: Parser<number> = currentEndPosition.map(
-  (p) => p.character
-);
+export const currentStartLine: Parser<number> = currentStartPosition.map((p) => p.line);
+export const currentStartCharacter: Parser<number> = currentStartPosition.map((p) => p.character);
+export const currentEndLine: Parser<number> = currentEndPosition.map((p) => p.line);
+export const currentEndCharacter: Parser<number> = currentEndPosition.map((p) => p.character);
 
-export const lastStartLine: Parser<number> = lastStartPosition.map(
-  (p) => p.line
-);
-export const lastStartCharacter: Parser<number> = lastStartPosition.map(
-  (p) => p.character
-);
+export const lastStartLine: Parser<number> = lastStartPosition.map((p) => p.line);
+export const lastStartCharacter: Parser<number> = lastStartPosition.map((p) => p.character);
 export const lastEndLine: Parser<number> = lastEndPosition.map((p) => p.line);
-export const lastEndCharacter: Parser<number> = lastEndPosition.map(
-  (p) => p.character
-);
+export const lastEndCharacter: Parser<number> = lastEndPosition.map((p) => p.character);

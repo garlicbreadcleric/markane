@@ -56,8 +56,7 @@ const cliParserOptions = {
       options: {
         citationKey: {
           short: "c",
-          description:
-            "Citation key (will output all citation entries if none provided)",
+          description: "Citation key (will output all citation entries if none provided)",
           type: cli.CliCommandOptionType.String,
         },
       },
@@ -67,19 +66,16 @@ const cliParserOptions = {
       options: {},
     },
     parse: {
-      description:
-        "Parse Markdown and show abstract syntax representation (for development purposes only)",
+      description: "Parse Markdown and show abstract syntax representation (for development purposes only)",
       options: {
         input: {
           short: "i",
-          description:
-            "Input file path (will read from stdin if none provided)",
+          description: "Input file path (will read from stdin if none provided)",
           type: cli.CliCommandOptionType.String,
         },
         output: {
           short: "o",
-          description:
-            "Output file path (will write to stdout if none provided)",
+          description: "Output file path (will write to stdout if none provided)",
           type: cli.CliCommandOptionType.String,
         },
         format: {
@@ -149,9 +145,7 @@ export async function main() {
     case "bibliography": {
       await citationProvider.index();
       if (cliOptions.options.citationKey != null) {
-        const entry = citationProvider.getByCitationKey(
-          cliOptions.options.citationKey
-        );
+        const entry = citationProvider.getByCitationKey(cliOptions.options.citationKey);
         console.log(JSON.stringify(entry));
       } else {
         console.log(JSON.stringify(citationProvider.bibliography));
@@ -159,14 +153,7 @@ export async function main() {
       break;
     }
     case "lsp":
-      lsp.runLspServer(
-        config,
-        logger,
-        documentProvider,
-        citationProvider,
-        templateProvider,
-        snippetProvider
-      );
+      lsp.runLspServer(config, logger, documentProvider, citationProvider, templateProvider, snippetProvider);
       break;
     case "parse":
       let input = null;
@@ -186,13 +173,7 @@ export async function main() {
           const lines = await tokenizer.tokenize("text.html.markdown", input);
           for (const line of lines) {
             for (const { start, end, scopes, content } of line) {
-              console.log(
-                JSON.stringify(
-                  { start, end, scopes: scopes.join(", "), content },
-                  null,
-                  2
-                )
-              );
+              console.log(JSON.stringify({ start, end, scopes: scopes.join(", "), content }, null, 2));
             }
           }
           break;

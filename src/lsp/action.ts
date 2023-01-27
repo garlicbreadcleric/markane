@@ -1,12 +1,7 @@
 import path from "path";
 import * as url from "url";
 
-import {
-  CodeAction,
-  CodeActionParams,
-  Position,
-  Range,
-} from "vscode-languageserver";
+import { CodeAction, CodeActionParams, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Config } from "../config";
@@ -24,10 +19,7 @@ export class ActionManager {
     protected templateProvider: TemplateProvider
   ) {}
 
-  async onCodeAction(
-    textDocument: TextDocument,
-    params: CodeActionParams
-  ): Promise<CodeAction[]> {
+  async onCodeAction(textDocument: TextDocument, params: CodeActionParams): Promise<CodeAction[]> {
     const actions: CodeAction[] = [];
 
     const document = await this.documentProvider.getDocumentBySrc(
@@ -35,10 +27,7 @@ export class ActionManager {
       textDocument.getText()
     );
 
-    const sourceAction = await this.createSourceNoteCodeAction(
-      document,
-      params
-    );
+    const sourceAction = await this.createSourceNoteCodeAction(document, params);
     if (sourceAction != null) {
       actions.push(sourceAction);
     }
@@ -55,10 +44,7 @@ export class ActionManager {
     document: markdown.MarkdownDocument,
     params: CodeActionParams
   ): Promise<CodeAction | null> {
-    const element = markdown.getElementAt(
-      document.elements,
-      params.range.start
-    );
+    const element = markdown.getElementAt(document.elements, params.range.start);
 
     if (
       element == null ||
@@ -72,23 +58,18 @@ export class ActionManager {
     const sourceDirectory = this.config.citations?.folders?.at(0);
     if (sourceDirectory == null) return null;
 
-    const citationTarget = await this.documentProvider.getDocumentByCitationKey(
-      element.key.content
-    );
+    const citationTarget = await this.documentProvider.getDocumentByCitationKey(element.key.content);
 
     if (citationTarget != null) return null;
 
-    const citationEntry = this.citationProvider.getByCitationKey(
-      element.key.content
-    );
+    const citationEntry = this.citationProvider.getByCitationKey(element.key.content);
 
-    const { filePath, fileContent } =
-      await this.templateProvider.prepareToCreateFile(
-        `${process.cwd()}/${sourceDirectory}`,
-        {
-          citationEntry,
-        }
-      );
+    const { filePath, fileContent } = await this.templateProvider.prepareToCreateFile(
+      `${process.cwd()}/${sourceDirectory}`,
+      {
+        citationEntry,
+      }
+    );
 
     const action: CodeAction = {
       title: "Create a source note",
@@ -99,10 +80,7 @@ export class ActionManager {
             textDocument: { uri: filePath, version: null },
             edits: [
               {
-                range: Range.create(
-                  Position.create(0, 0),
-                  Position.create(0, 0)
-                ),
+                range: Range.create(Position.create(0, 0), Position.create(0, 0)),
                 newText: fileContent,
               },
             ],
@@ -113,10 +91,7 @@ export class ActionManager {
     return action;
   }
 
-  async createNoteCodeAction(
-    textDocument: TextDocument,
-    params: CodeActionParams
-  ): Promise<CodeAction | null> {
+  async createNoteCodeAction(textDocument: TextDocument, params: CodeActionParams): Promise<CodeAction | null> {
     const noteDirectory = this.config.folders?.at(0)?.path;
     if (noteDirectory == null) return null;
 
@@ -126,18 +101,14 @@ export class ActionManager {
 
     if (selectedText.length === 0) return null;
 
-    const { filePath, fileContent } =
-      await this.templateProvider.prepareToCreateFile(
-        `${process.cwd()}/${noteDirectory}`,
-        {
-          title: selectedText,
-        }
-      );
-
-    const relativeFilePath = path.relative(
-      path.dirname(url.fileURLToPath(textDocument.uri)),
-      filePath
+    const { filePath, fileContent } = await this.templateProvider.prepareToCreateFile(
+      `${process.cwd()}/${noteDirectory}`,
+      {
+        title: selectedText,
+      }
     );
+
+    const relativeFilePath = path.relative(path.dirname(url.fileURLToPath(textDocument.uri)), filePath);
 
     const action: CodeAction = {
       title: "Create a note",
@@ -148,10 +119,7 @@ export class ActionManager {
             textDocument: { uri: filePath, version: null },
             edits: [
               {
-                range: Range.create(
-                  Position.create(0, 0),
-                  Position.create(0, 0)
-                ),
+                range: Range.create(Position.create(0, 0), Position.create(0, 0)),
                 newText: fileContent,
               },
             ],

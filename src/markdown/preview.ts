@@ -5,10 +5,7 @@ import * as parsec from "../parsec";
 
 type PreviewContent = { content: string; lastLine: number };
 
-function appendContent(
-  value: PreviewContent,
-  { content, lastLine }: PreviewContent
-): PreviewContent {
+function appendContent(value: PreviewContent, { content, lastLine }: PreviewContent): PreviewContent {
   if (value.lastLine > lastLine) {
     content += "\n".repeat(value.lastLine - lastLine);
   }
@@ -18,22 +15,17 @@ function appendContent(
 }
 
 export function documentPreview(filePath: string): parsec.Parser<string> {
-  const normalizeLink = parsec
-    .scopedP("markup.underline.link.markdown")
-    .map((t) => {
-      if (isRelativeLink(t.content)) {
-        const dir = path.dirname(filePath);
-        return { content: path.join(dir, t.content), lastLine: t.end.line };
-      }
+  const normalizeLink = parsec.scopedP("markup.underline.link.markdown").map((t) => {
+    if (isRelativeLink(t.content)) {
+      const dir = path.dirname(filePath);
+      return { content: path.join(dir, t.content), lastLine: t.end.line };
+    }
 
-      return { content: t.content, lastLine: t.end.line };
-    });
+    return { content: t.content, lastLine: t.end.line };
+  });
 
   const skipImage = parsec
-    .scopedP(
-      ["meta.image.inline.markdown", "meta.image.reference.markdown"],
-      parsec.ScopedMode.Or
-    )
+    .scopedP(["meta.image.inline.markdown", "meta.image.reference.markdown"], parsec.ScopedMode.Or)
     .map((t) => ({ content: "", lastLine: t.end.line }));
 
   const anyToken: parsec.Parser<PreviewContent> = parsec.anyP.map((t) => ({
@@ -42,10 +34,6 @@ export function documentPreview(filePath: string): parsec.Parser<string> {
   }));
 
   return parsec
-    .manyWithAccP(
-      parsec.oneOfP([skipImage, normalizeLink, anyToken]),
-      appendContent,
-      { content: "", lastLine: 0 }
-    )
+    .manyWithAccP(parsec.oneOfP([skipImage, normalizeLink, anyToken]), appendContent, { content: "", lastLine: 0 })
     .map(({ acc: { content } }) => content);
 }

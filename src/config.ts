@@ -28,8 +28,6 @@ export async function getConfig(): Promise<Config | null> {
   const configReadable = await utils.isFileReadable("./markane.yaml");
   if (!configReadable) return null;
 
-  const configSrc = await utils
-    .readFile("./markane.yaml")
-    .then((data: Buffer) => data.toString());
+  const configSrc = await utils.readFile("./markane.yaml").then((data: Buffer) => data.toString());
   return yaml.parse(configSrc);
 }

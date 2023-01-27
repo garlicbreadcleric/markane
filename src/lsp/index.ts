@@ -36,20 +36,10 @@ export async function runLspServer(
   templateProvider: TemplateProvider,
   snippetProvider: SnippetProvider
 ) {
-  const completionManager = new CompletionManager(
-    config,
-    documentProvider,
-    citationProvider,
-    snippetProvider
-  );
+  const completionManager = new CompletionManager(config, documentProvider, citationProvider, snippetProvider);
   const definitionManager = new DefinitionManager(config, documentProvider);
   const symbolManager = new SymbolManager(config, documentProvider);
-  const actionManager = new ActionManager(
-    config,
-    documentProvider,
-    citationProvider,
-    templateProvider
-  );
+  const actionManager = new ActionManager(config, documentProvider, citationProvider, templateProvider);
   const referenceManager = new ReferenceManager(config, documentProvider);
 
   const connection = createConnection(process.stdin, process.stdout);
@@ -80,19 +70,12 @@ export async function runLspServer(
   });
 
   connection.onInitialized(async () => {
-    await Promise.all([
-      documentProvider.index(),
-      citationProvider.index(),
-      snippetProvider.index(),
-    ]);
+    await Promise.all([documentProvider.index(), citationProvider.index(), snippetProvider.index()]);
   });
 
   connection.onDidChangeWatchedFiles(async (params) => {
     for (const change of params.changes) {
-      if (
-        change.type === FileChangeType.Created ||
-        change.type === FileChangeType.Changed
-      ) {
+      if (change.type === FileChangeType.Created || change.type === FileChangeType.Changed) {
         await documentProvider.updateDocument(url.fileURLToPath(change.uri));
       }
 
@@ -142,18 +125,11 @@ export async function runLspServer(
     const textDocument = documents.get(params.textDocument.uri);
     if (textDocument == null) return null;
     const documentPath = url.fileURLToPath(textDocument.uri);
-    const document = await documentProvider.getDocumentBySrc(
-      documentPath,
-      textDocument.getText()
-    );
+    const document = await documentProvider.getDocumentBySrc(documentPath, textDocument.getText());
 
-    const heading = markdown.findElement(
-      (e) => e.type === "heading" && e.level === 1,
-      document.elements
-    );
+    const heading = markdown.findElement((e) => e.type === "heading" && e.level === 1, document.elements);
 
-    const referencesLocations =
-      referenceManager.getReferencesToPath(documentPath);
+    const referencesLocations = referenceManager.getReferencesToPath(documentPath);
     const mentionsLocations = referenceManager.getMentions(documents, document);
 
     const range =
@@ -165,9 +141,7 @@ export async function runLspServer(
     const referencesLens: CodeLens = {
       command: {
         command: "markane/showReferences",
-        title:
-          `${referencesLocations.length} ` +
-          (referencesLocations.length === 1 ? "reference" : "references"),
+        title: `${referencesLocations.length} ` + (referencesLocations.length === 1 ? "reference" : "references"),
         arguments: [params.textDocument.uri, position, referencesLocations],
       },
       range,
@@ -177,9 +151,7 @@ export async function runLspServer(
     const mentionsLens: CodeLens = {
       command: {
         command: "markane/showMentions",
-        title:
-          `${mentionsLocations.length} ` +
-          (mentionsLocations.length === 1 ? "mention" : "mentions"),
+        title: `${mentionsLocations.length} ` + (mentionsLocations.length === 1 ? "mention" : "mentions"),
         arguments: [params.textDocument.uri, position, mentionsLocations],
       },
       range,
@@ -203,10 +175,7 @@ export async function runLspServer(
       const textDocument = documents.get(params.textDocument.uri);
       if (textDocument == null) return null;
       const src = textDocument.getText();
-      const doc = await documentProvider.getDocumentBySrc(
-        url.fileURLToPath(params.textDocument.uri),
-        src
-      );
+      const doc = await documentProvider.getDocumentBySrc(url.fileURLToPath(params.textDocument.uri), src);
 
       const position = {
         line: params.position.line,
@@ -219,26 +188,18 @@ export async function runLspServer(
       const { start, end } = element;
 
       const isOverInlineLinkPath =
-        element.type === "inlineLink" &&
-        element.path != null &&
-        markdown.isWithinRange(position, element.path);
+        element.type === "inlineLink" && element.path != null && markdown.isWithinRange(position, element.path);
       const isOverInlineImagePath =
-        element.type === "inlineImage" &&
-        element.path != null &&
-        markdown.isWithinRange(position, element.path);
+        element.type === "inlineImage" && element.path != null && markdown.isWithinRange(position, element.path);
       const hasRelativePath =
-        (isOverInlineLinkPath || isOverInlineImagePath) &&
-        utils.isRelativeLink(element.path!.content);
+        (isOverInlineLinkPath || isOverInlineImagePath) && utils.isRelativeLink(element.path!.content);
 
       if (element.type === "comment") return null;
       if (hasRelativePath && path.extname(element.path!.content) === ".md") {
         assert(element.path != null);
 
         const target = await documentProvider.getDocumentByPath(
-          path.join(
-            path.dirname(url.fileURLToPath(params.textDocument.uri)),
-            element.path.content
-          )
+          path.join(path.dirname(url.fileURLToPath(params.textDocument.uri)), element.path.content)
         );
         if (target == null) return null;
 
@@ -255,9 +216,7 @@ export async function runLspServer(
       }
 
       if (element.type === "citation") {
-        const target = await documentProvider.getDocumentByCitationKey(
-          element.key.content
-        );
+        const target = await documentProvider.getDocumentByCitationKey(element.key.content);
         if (target == null) return null;
         const preview = await documentProvider.updateDocumentPreview(target);
 
@@ -273,16 +232,11 @@ export async function runLspServer(
 
       if (
         hasRelativePath &&
-        [".png", ".jpg", ".jpeg", ".gif"].includes(
-          path.extname(element.path!.content).toLowerCase()
-        )
+        [".png", ".jpg", ".jpeg", ".gif"].includes(path.extname(element.path!.content).toLowerCase())
       ) {
         assert(element.path != null);
 
-        const target = path.join(
-          path.dirname(url.fileURLToPath(params.textDocument.uri)),
-          element.path.content
-        );
+        const target = path.join(path.dirname(url.fileURLToPath(params.textDocument.uri)), element.path.content);
 
         const targetExists = await utils.isFileReadable(target);
 
@@ -320,11 +274,7 @@ export async function runLspServer(
         const locations = params.arguments?.at(2);
 
         if (uri != null && locations != null) {
-          await connection.sendNotification("markane/showReferences", [
-            uri,
-            position,
-            locations,
-          ]);
+          await connection.sendNotification("markane/showReferences", [uri, position, locations]);
         }
       }
     }
