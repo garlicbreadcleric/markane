@@ -113,53 +113,60 @@ export class Parser<T> {
   }
 }
 
-class ParserComputation<TScopeIn, TScopeOut, TValue> {
-  public constructor(protected readonly parserFn: (scope: TScopeIn) => Parser<{ value: TValue; scope: TScopeOut }>) {}
+type ScopedParserComputationStatement<TScope, TValue> = Parser<TValue> | ((scope: TScope) => Parser<TValue>);
+
+class ScopedParserComputation<TScope, TValue> {
+  public constructor(public readonly parser: Parser<{ value: TValue; scope: TScope }>) {}
+
+  public static create<TScope = {}, TValue = null>(): ScopedParserComputation<{}, null>;
+  public static create<TScope, TValue>(scope: TScope, value: TValue): ScopedParserComputation<TScope, TValue>;
+
+  public static create<TScope, TValue>(scope?: TScope, value?: TValue): ScopedParserComputation<TScope, TValue> {
+    if (scope == null && value == null) {
+      return <any>new ScopedParserComputation(Parser.pure({ value: null, scope: {} }));
+    } else {
+      return new ScopedParserComputation(Parser.pure({ value: value!, scope: scope! }));
+    }
+  }
+
+  public get valueParser(): Parser<TValue> {
+    return this.parser.map(({ value }) => value);
+  }
+  public get scopeParser(): Parser<TScope> {
+    return this.parser.map(({ scope }) => scope);
+  }
 
   public bind<TName extends string, TValue2>(
     name: TName,
-    f: (scope: TScopeOut) => Parser<TValue2>
-  ): ParserComputation<TScopeIn, TScopeOut & { [x in TName]: TValue2 }, TValue2> {
-    return new ParserComputation((scope) => {
-      return this.parserFn(scope).chain(
-        (previousResult) =>
-          new Parser((state) => {
-            const result = f(previousResult.scope).run(state);
-            if (result.status !== ParserStatus.Ok) {
-              return result;
-            }
-            const newScope = <any>Object.assign({ [name]: result.value }, previousResult.scope);
-            return { status: result.status, state: result.state, value: { value: result.value, scope: newScope } };
-          })
-      );
-    });
-  }
+    s: ScopedParserComputationStatement<TScope, TValue2>
+  ): ScopedParserComputation<TScope & { [x in TName]: TValue2 }, TValue2> {
+    const f: (scope: TScope) => Parser<TValue2> = s instanceof Parser ? () => s : s;
 
-  public bind_<TName extends string, TValue2>(
-    name: TName,
-    p: Parser<TValue2>
-  ): ParserComputation<TScopeIn, TScopeOut & { [x in TName]: TValue2 }, TValue2> {
-    return this.bind(name, () => p);
-  }
-
-  public do<TValue2>(f: (scope: TScopeOut) => Parser<TValue2>): ParserComputation<TScopeIn, TScopeOut, TValue2> {
-    return new ParserComputation((scope) =>
-      this.parserFn(scope).chain((previousResult) =>
-        f(previousResult.scope).map((value) => ({ value, scope: previousResult.scope }))
+    return new ScopedParserComputation(
+      this.parser.chain(({ scope }) =>
+        f(scope).map((value) => ({
+          value,
+          scope: <any>Object.assign({ [name]: value }, scope),
+        }))
       )
     );
   }
 
-  public do_<TValue2>(p: Parser<TValue2>): ParserComputation<TScopeIn, TScopeOut, TValue2> {
-    return this.do(() => p);
-  }
+  public do<TValue2>(s: ScopedParserComputationStatement<TScope, TValue2>): ScopedParserComputation<TScope, TValue2> {
+    const f: (scope: TScope) => Parser<TValue2> = s instanceof Parser ? () => s : s;
 
-  public makeParser(initialScope: TScopeIn): Parser<TValue> {
-    return this.parserFn(initialScope).map(({ value }) => value);
+    return new ScopedParserComputation(
+      this.parser.chain(({ scope }) =>
+        f(scope).map((value) => ({
+          value,
+          scope,
+        }))
+      )
+    );
   }
 }
 
-export const P = new ParserComputation<{}, {}, null>(() => Parser.pure({ scope: {}, value: null }));
+export const P = ScopedParserComputation.create;
 
 export const anyP: Parser<Token> = new Parser((state: ParserState) => {
   if (state.offset < state.tokens.length) {
