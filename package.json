@@ -8,7 +8,7 @@
     "prepublish": "npm ruh build",
     "build": "rm -rf ./dist && tsc",
     "buildDev": "rm -rf ./dist && tsc --sourceMap",
-    "format": "fd '\\.ts$' src bin -x npx prettier -w",
+    "format": "fd '\\.ts$' src bin tests -x npx prettier -w",
     "test": "mocha -r ts-node/register 'tests/**/*-test.ts'"
   },
   "bin": {
