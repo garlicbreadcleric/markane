@@ -46,7 +46,7 @@ const parseFrontmatter: parsec.Parser<MarkdownFrontmatter> = parsec.init
     } catch (e: any) {
       return parsec.Parser.fail(e.toString());
     }
-  });
+  }, "parseFrontmatter");
 
 export const parseComment: parsec.Parser<MarkdownComment> = parsec
   .scoped("comment.block.html")
@@ -60,7 +60,7 @@ export const parseComment: parsec.Parser<MarkdownComment> = parsec
       end,
       content,
     };
-  });
+  }, "parseComment");
 
 export const parseInlineLink: parsec.Parser<MarkdownInlineLink> = parsec.init
   .bind("titleBegin", parsec.scoped(["punctuation.definition.link.title.begin.markdown", "meta.link.inline.markdown"]))
@@ -101,7 +101,7 @@ export const parseInlineLink: parsec.Parser<MarkdownInlineLink> = parsec.init
       title,
       path,
     };
-  });
+  }, "parseInlineLink");
 
 export const parseShortReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.init
   .bind("refBegin", parsec.scoped(["punctuation.definition.link.title.begin.markdown", "meta.link.reference.markdown"]))
@@ -130,7 +130,7 @@ export const parseShortReferenceLink: parsec.Parser<MarkdownReferenceLink> = par
       reference,
       title: null,
     };
-  });
+  }, "parseShortReferenceLink");
 
 export const parseFullReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.init
   .bind(
@@ -171,12 +171,12 @@ export const parseFullReferenceLink: parsec.Parser<MarkdownReferenceLink> = pars
       reference,
       title,
     };
-  });
+  }, "parseFullReferenceLink");
 
 export const parseReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.oneOf([
   parseFullReferenceLink,
   parseShortReferenceLink,
-]);
+]).withName("parseReferenceLink");
 
 export const parseInlineImage: parsec.Parser<MarkdownInlineImage> = parsec.init
   .bind(
@@ -214,7 +214,7 @@ export const parseInlineImage: parsec.Parser<MarkdownInlineImage> = parsec.init
       title,
       path,
     };
-  });
+  }, "parseInlineImage");
 
 export const parseReferenceImage = null; // TODO.
 
@@ -241,7 +241,7 @@ export const parseSimpleCitation: parsec.Parser<MarkdownCitation> = parsec.init
       content,
       key,
     };
-  });
+  }, "parseSimpleCitation");
 
 export const parseEscapedCitation: parsec.Parser<MarkdownCitation> = parsec.init
   .bind(
@@ -273,9 +273,9 @@ export const parseEscapedCitation: parsec.Parser<MarkdownCitation> = parsec.init
       content,
       key,
     };
-  });
+  }, "parseEscapedCitation");
 
-export const parseCitation = parsec.oneOf([parseEscapedCitation, parseSimpleCitation]);
+export const parseCitation = parsec.oneOf([parseEscapedCitation, parseSimpleCitation]).withName("parseCitation");
 
 export const parseHeading: parsec.Parser<MarkdownHeading> = parsec.currentStartLine.chain((l) => {
   const headingDefinitionScope = "punctuation.definition.heading.markdown";
@@ -321,7 +321,7 @@ export const parseHeading: parsec.Parser<MarkdownHeading> = parsec.currentStartL
         children: headingContent.elements,
       };
     });
-});
+}, "parseHeading");
 
 export const parseFencedCode: parsec.Parser<MarkdownFencedCode> = parsec.init
   .bind("l", parsec.currentStartLine)
@@ -367,7 +367,7 @@ export const parseFencedCode: parsec.Parser<MarkdownFencedCode> = parsec.init
       language,
       code,
     };
-  });
+  }, "parseFencedCode");
 
 export const parseFencedDiv: parsec.Parser<MarkdownFencedDiv> = parsec.init
   .bind("l", parsec.currentStartLine)
@@ -383,7 +383,7 @@ export const parseFencedDiv: parsec.Parser<MarkdownFencedDiv> = parsec.init
   .bind("beginJunkTokens2", ({ l }) => parsec.scoped("markup.fenced_div.block.markdown").check(withinLine(l)).many())
   .bind(
     "children",
-    parseElements(parsec.takeOne.check(notPredicate(hasScope("punctuation.definition.fenced_div.end.markdown"))))
+    () => parseElements(parsec.takeOne.check(notPredicate(hasScope("punctuation.definition.fenced_div.end.markdown"))))
   )
   .bind("endToken", parsec.scoped("punctuation.definition.fenced_div.end.markdown"))
   .map(({ beginToken, beginJunkTokens1, attributesToken, beginJunkTokens2, children, endToken }) => {
@@ -419,7 +419,7 @@ export const parseFencedDiv: parsec.Parser<MarkdownFencedDiv> = parsec.init
       attributes: attributesToken?.content ?? "",
       children,
     };
-  });
+  }, "parseFencedDiv");
 
 export const parseElement: parsec.Parser<MarkdownElement> = parsec.oneOf<MarkdownElement>([
   parseFencedCode,
@@ -429,7 +429,7 @@ export const parseElement: parsec.Parser<MarkdownElement> = parsec.oneOf<Markdow
   parseReferenceLink,
   parseInlineImage,
   parseCitation,
-]);
+]).withName("parseElement");
 
 export function parseElements(tokenComeback: parsec.Parser<Token> | null = null): parsec.Parser<MarkdownElement[]> {
   return parsec
@@ -469,7 +469,7 @@ export function parseElements(tokenComeback: parsec.Parser<Token> | null = null)
       },
       []
     )
-    .map(({ acc }) => acc);
+    .map(({ acc }) => acc, "parseElements");
 }
 
 export function parseDocument(filePath: string): parsec.Parser<MarkdownDocument> {
@@ -493,7 +493,8 @@ export function parseDocument(filePath: string): parsec.Parser<MarkdownDocument>
         metadata: frontmatter?.metadata ?? {},
         title,
       };
-    })
+    }),
+    "parseDocument"
   );
 }
 

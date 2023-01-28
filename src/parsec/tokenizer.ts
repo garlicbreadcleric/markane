@@ -86,7 +86,6 @@ export class Tokenizer {
       onigLib: vscodeOnigurumaLib,
       async loadGrammar(scopeName) {
         const scopeMap: any = {
-          "source.markane": "markane",
           "source.yaml": "yaml",
           "text.html.markdown": "markdown",
           "text.html.basic": "html",
