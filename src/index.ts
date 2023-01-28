@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-import * as lsp from "./lsp";
-import * as cli from "./cli";
 import readline from "readline";
 
+import colors from "colors/safe";
+
+import * as lsp from "./lsp";
+import * as cli from "./cli";
 import * as markdown from "./markdown";
 import { Logger } from "./logger";
 import { getConfig } from "./config";
@@ -86,6 +88,11 @@ const cliParserOptions = {
         },
       },
     },
+    "parse-interactive": {
+      description: "Parse Markdown interactively (for development purposes only)",
+      options: {
+      }
+    },
     help: {
       description: "Show help message",
     },
@@ -155,7 +162,7 @@ export async function main() {
     case "lsp":
       lsp.runLspServer(config, logger, documentProvider, citationProvider, templateProvider, snippetProvider);
       break;
-    case "parse":
+    case "parse": {
       let input = null;
       if (cliOptions.options.input == null) {
         input = await readStdin();
@@ -180,6 +187,32 @@ export async function main() {
         }
       }
       break;
+    }
+    case "parse-interactive": {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      function interactive(acc: string[] = []) {
+        rl.question(colors.cyan("> "), async (answer) => {
+          if (answer === '') {
+            console.log(acc.join('\n'));
+            try {
+              const elements = (await markdownParser.parse("input.md", acc.join('\n'))).elements;
+              console.log(JSON.stringify(elements, null, 2));
+            } catch (e: any) {
+              if (e instanceof Error) {
+                console.error(e.stack);
+              } else {
+                console.error(e);
+              }
+            }
+            interactive();
+          } else {
+            interactive([...acc, answer]);
+          }
+        });
+      }
+      interactive();
+      break;
+    }
     case "help":
       console.log(cliParser.help());
       break;
