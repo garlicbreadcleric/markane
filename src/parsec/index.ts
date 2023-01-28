@@ -45,18 +45,24 @@ export class Parser<T> {
   }
 
   static pure<T>(value: T, parserName: string | null = null): Parser<T> {
-    return new Parser((state: ParserState) => ({
-      status: ParserStatus.Ok,
-      value,
-      state,
-    }), parserName);
+    return new Parser(
+      (state: ParserState) => ({
+        status: ParserStatus.Ok,
+        value,
+        state,
+      }),
+      parserName
+    );
   }
 
   static fail<T>(message?: string, parserName: string | null = null): Parser<T> {
-    return new Parser((_state: ParserState) => ({
-      status: ParserStatus.Error,
-      message,
-    }), parserName);
+    return new Parser(
+      (_state: ParserState) => ({
+        status: ParserStatus.Error,
+        message,
+      }),
+      parserName
+    );
   }
 
   parse(tokens: Token[]): T {
@@ -229,7 +235,11 @@ export function tryOrNull<T>(p: Parser<T>, parserName: string | null = null): Pa
   return tryOrDefault(p, null, parserName);
 }
 
-export function tryOrDefault<T, TDefault>(p: Parser<T>, def: TDefault, parserName: string | null = null): Parser<T | TDefault> {
+export function tryOrDefault<T, TDefault>(
+  p: Parser<T>,
+  def: TDefault,
+  parserName: string | null = null
+): Parser<T | TDefault> {
   return new Parser((state: ParserState): ParserResult<T | TDefault> => {
     const result = p.run(state);
     if (result.status === ParserStatus.Ok) {
@@ -315,7 +325,11 @@ export function many<T>(p: Parser<T>, parserName: string | null = null): Parser<
   }, parserName ?? `${p.toString()}*`);
 }
 
-export function manyWithComeback<T, TComeback>(p: Parser<T>, comeback: Parser<TComeback>, parserName: string | null = null) {
+export function manyWithComeback<T, TComeback>(
+  p: Parser<T>,
+  comeback: Parser<TComeback>,
+  parserName: string | null = null
+) {
   return new Parser((state: ParserState) => {
     const result = [];
     let currentState = state;
@@ -465,7 +479,11 @@ export function flatSeq<T>(parsers: Parser<T[]>[]): Parser<T[]> {
   });
 }
 
-export function check<T>(pred: (t: T) => boolean, messageFn?: (t: T) => string, parserName: string | null = null): (p: Parser<T>) => Parser<T> {
+export function check<T>(
+  pred: (t: T) => boolean,
+  messageFn?: (t: T) => string,
+  parserName: string | null = null
+): (p: Parser<T>) => Parser<T> {
   return (p: Parser<T>) =>
     p.chain(
       (t) =>

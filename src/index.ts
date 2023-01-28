@@ -90,8 +90,7 @@ const cliParserOptions = {
     },
     "parse-interactive": {
       description: "Parse Markdown interactively (for development purposes only)",
-      options: {
-      }
+      options: {},
     },
     help: {
       description: "Show help message",
@@ -192,10 +191,10 @@ export async function main() {
       const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
       function interactive(acc: string[] = []) {
         rl.question(colors.cyan("> "), async (answer) => {
-          if (answer === '') {
-            console.log(acc.join('\n'));
+          if (answer === "") {
+            console.log(acc.join("\n"));
             try {
-              const elements = (await markdownParser.parse("input.md", acc.join('\n'))).elements;
+              const elements = (await markdownParser.parse("input.md", acc.join("\n"))).elements;
               console.log(JSON.stringify(elements, null, 2));
             } catch (e: any) {
               if (e instanceof Error) {

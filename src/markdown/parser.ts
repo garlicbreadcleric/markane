@@ -173,10 +173,9 @@ export const parseFullReferenceLink: parsec.Parser<MarkdownReferenceLink> = pars
     };
   }, "parseFullReferenceLink");
 
-export const parseReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.oneOf([
-  parseFullReferenceLink,
-  parseShortReferenceLink,
-]).withName("parseReferenceLink");
+export const parseReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec
+  .oneOf([parseFullReferenceLink, parseShortReferenceLink])
+  .withName("parseReferenceLink");
 
 export const parseInlineImage: parsec.Parser<MarkdownInlineImage> = parsec.init
   .bind(
@@ -381,9 +380,8 @@ export const parseFencedDiv: parsec.Parser<MarkdownFencedDiv> = parsec.init
   )
   .bind("attributesToken", ({ l }) => parsec.scoped("fenced_div.block.attributes.markdown").check(withinLine(l)).try())
   .bind("beginJunkTokens2", ({ l }) => parsec.scoped("markup.fenced_div.block.markdown").check(withinLine(l)).many())
-  .bind(
-    "children",
-    () => parseElements(parsec.takeOne.check(notPredicate(hasScope("punctuation.definition.fenced_div.end.markdown"))))
+  .bind("children", () =>
+    parseElements(parsec.takeOne.check(notPredicate(hasScope("punctuation.definition.fenced_div.end.markdown"))))
   )
   .bind("endToken", parsec.scoped("punctuation.definition.fenced_div.end.markdown"))
   .map(({ beginToken, beginJunkTokens1, attributesToken, beginJunkTokens2, children, endToken }) => {
@@ -421,15 +419,17 @@ export const parseFencedDiv: parsec.Parser<MarkdownFencedDiv> = parsec.init
     };
   }, "parseFencedDiv");
 
-export const parseElement: parsec.Parser<MarkdownElement> = parsec.oneOf<MarkdownElement>([
-  parseFencedCode,
-  parseFencedDiv,
-  parseHeading,
-  parseInlineLink,
-  parseReferenceLink,
-  parseInlineImage,
-  parseCitation,
-]).withName("parseElement");
+export const parseElement: parsec.Parser<MarkdownElement> = parsec
+  .oneOf<MarkdownElement>([
+    parseFencedCode,
+    parseFencedDiv,
+    parseHeading,
+    parseInlineLink,
+    parseReferenceLink,
+    parseInlineImage,
+    parseCitation,
+  ])
+  .withName("parseElement");
 
 export function parseElements(tokenComeback: parsec.Parser<Token> | null = null): parsec.Parser<MarkdownElement[]> {
   return parsec
@@ -473,27 +473,28 @@ export function parseElements(tokenComeback: parsec.Parser<Token> | null = null)
 }
 
 export function parseDocument(filePath: string): parsec.Parser<MarkdownDocument> {
-  return parseFrontmatter.tryWithDefault(null).chain((frontmatter) =>
-    parseElements().map((elements) => {
-      let title = null;
-      if (frontmatter?.metadata?.title != null) {
-        title = frontmatter.metadata.title;
-      } else {
-        const h1 = <MarkdownHeading>findElement((e) => e.type === "heading" && e.level === 1, elements);
-        if (h1 != null) {
-          title = h1.title.content;
+  return parseFrontmatter.tryWithDefault(null).chain(
+    (frontmatter) =>
+      parseElements().map((elements) => {
+        let title = null;
+        if (frontmatter?.metadata?.title != null) {
+          title = frontmatter.metadata.title;
+        } else {
+          const h1 = <MarkdownHeading>findElement((e) => e.type === "heading" && e.level === 1, elements);
+          if (h1 != null) {
+            title = h1.title.content;
+          }
         }
-      }
 
-      const elementsWithFm = frontmatter == null ? elements : [<MarkdownElement>frontmatter].concat(elements);
+        const elementsWithFm = frontmatter == null ? elements : [<MarkdownElement>frontmatter].concat(elements);
 
-      return {
-        filePath,
-        elements: elementsWithFm,
-        metadata: frontmatter?.metadata ?? {},
-        title,
-      };
-    }),
+        return {
+          filePath,
+          elements: elementsWithFm,
+          metadata: frontmatter?.metadata ?? {},
+          title,
+        };
+      }),
     "parseDocument"
   );
 }
