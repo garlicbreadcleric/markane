@@ -15,7 +15,7 @@ function appendContent(value: PreviewContent, { content, lastLine }: PreviewCont
 }
 
 export function documentPreview(filePath: string): parsec.Parser<string> {
-  const normalizeLink = parsec.scopedP("markup.underline.link.markdown").map((t) => {
+  const normalizeLink = parsec.scoped("markup.underline.link.markdown").map((t) => {
     if (isRelativeLink(t.content)) {
       const dir = path.dirname(filePath);
       return { content: path.join(dir, t.content), lastLine: t.end.line };
@@ -25,15 +25,15 @@ export function documentPreview(filePath: string): parsec.Parser<string> {
   });
 
   const skipImage = parsec
-    .scopedP(["meta.image.inline.markdown", "meta.image.reference.markdown"], parsec.ScopedMode.Or)
+    .scoped(["meta.image.inline.markdown", "meta.image.reference.markdown"], parsec.ScopedMode.Or)
     .map((t) => ({ content: "", lastLine: t.end.line }));
 
-  const anyToken: parsec.Parser<PreviewContent> = parsec.anyP.map((t) => ({
+  const anyToken: parsec.Parser<PreviewContent> = parsec.takeOne.map((t) => ({
     content: t.content,
     lastLine: t.end.line,
   }));
 
   return parsec
-    .manyWithAccP(parsec.oneOfP([skipImage, normalizeLink, anyToken]), appendContent, { content: "", lastLine: 0 })
+    .manyWithAcc(parsec.oneOf([skipImage, normalizeLink, anyToken]), appendContent, { content: "", lastLine: 0 })
     .map(({ acc: { content } }) => content);
 }
