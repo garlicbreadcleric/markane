@@ -27,6 +27,8 @@ export type ParserResult<T> = ParserResultOk<T> | ParserResultErr;
 
 export type ParserFn<T> = (state: ParserState) => ParserResult<T>;
 
+type ParserBindStmt<TScope, TValue> = Parser<TValue> | ((scope: TScope) => Parser<TValue>);
+
 export class Parser<T> {
   constructor(public readonly run: ParserFn<T>) {}
 
@@ -72,24 +74,29 @@ export class Parser<T> {
     return this.chain((v) => Parser.pure(f(v)));
   }
 
+  public bind<TName extends string, T2>(name: TName, s: ParserBindStmt<T, T2>): Parser<T & { [x in TName]: T2 }> {
+    const f: (scope: T) => Parser<T2> = s instanceof Parser ? () => s : s;
+    return this.chain((scope) => f(scope).map((value) => <any>Object.assign({ [name]: value }, scope)));
+  }
+
   singleton(): Parser<T[]> {
     return this.map((x) => [x]);
   }
 
   try(): Parser<T | null> {
-    return tryP(this);
+    return tryOrNull(this);
   }
 
   tryWithDefault<TDefault>(def: TDefault): Parser<T | TDefault> {
-    return tryWithDefaultP(this, def);
+    return tryOrDefault(this, def);
   }
 
   or<T2>(p: Parser<T2>): Parser<T | T2> {
-    return orP(this, p);
+    return or(this, p);
   }
 
   many(): Parser<T[]> {
-    return manyP(this);
+    return many(this);
   }
 
   many1(): Parser<T[]> {
@@ -97,7 +104,7 @@ export class Parser<T> {
   }
 
   manyWithComeback(comeback: Parser<any>): Parser<T[]> {
-    return manyWithComebackP(this, comeback);
+    return manyWithComeback(this, comeback);
   }
 
   check(pred: Predicate<T>, messageFn?: (t: T) => string): Parser<T> {
@@ -113,62 +120,62 @@ export class Parser<T> {
   }
 }
 
-type ScopedParserComputationStatement<TScope, TValue> = Parser<TValue> | ((scope: TScope) => Parser<TValue>);
+export const init = Parser.pure({});
 
-class ScopedParserComputation<TScope, TValue> {
-  public constructor(public readonly parser: Parser<{ value: TValue; scope: TScope }>) {}
+// class ScopedParserComputation<TScope, TValue> {
+//   public constructor(public readonly parser: Parser<{ value: TValue; scope: TScope }>) {}
 
-  public static create<TScope = {}, TValue = null>(): ScopedParserComputation<{}, null>;
-  public static create<TScope, TValue>(scope: TScope, value: TValue): ScopedParserComputation<TScope, TValue>;
+//   public static create<TScope = {}, TValue = null>(): ScopedParserComputation<{}, null>;
+//   public static create<TScope, TValue>(scope: TScope, value: TValue): ScopedParserComputation<TScope, TValue>;
 
-  public static create<TScope, TValue>(scope?: TScope, value?: TValue): ScopedParserComputation<TScope, TValue> {
-    if (scope == null && value == null) {
-      return <any>new ScopedParserComputation(Parser.pure({ value: null, scope: {} }));
-    } else {
-      return new ScopedParserComputation(Parser.pure({ value: value!, scope: scope! }));
-    }
-  }
+//   public static create<TScope, TValue>(scope?: TScope, value?: TValue): ScopedParserComputation<TScope, TValue> {
+//     if (scope == null && value == null) {
+//       return <any>new ScopedParserComputation(Parser.pure({ value: null, scope: {} }));
+//     } else {
+//       return new ScopedParserComputation(Parser.pure({ value: value!, scope: scope! }));
+//     }
+//   }
 
-  public get valueParser(): Parser<TValue> {
-    return this.parser.map(({ value }) => value);
-  }
-  public get scopeParser(): Parser<TScope> {
-    return this.parser.map(({ scope }) => scope);
-  }
+//   public get valueParser(): Parser<TValue> {
+//     return this.parser.map(({ value }) => value);
+//   }
+//   public get scopeParser(): Parser<TScope> {
+//     return this.parser.map(({ scope }) => scope);
+//   }
 
-  public bind<TName extends string, TValue2>(
-    name: TName,
-    s: ScopedParserComputationStatement<TScope, TValue2>
-  ): ScopedParserComputation<TScope & { [x in TName]: TValue2 }, TValue2> {
-    const f: (scope: TScope) => Parser<TValue2> = s instanceof Parser ? () => s : s;
+//   public bind<TName extends string, TValue2>(
+//     name: TName,
+//     s: ScopedParserComputationStatement<TScope, TValue2>
+//   ): ScopedParserComputation<TScope & { [x in TName]: TValue2 }, TValue2> {
+//     const f: (scope: TScope) => Parser<TValue2> = s instanceof Parser ? () => s : s;
 
-    return new ScopedParserComputation(
-      this.parser.chain(({ scope }) =>
-        f(scope).map((value) => ({
-          value,
-          scope: <any>Object.assign({ [name]: value }, scope),
-        }))
-      )
-    );
-  }
+//     return new ScopedParserComputation(
+//       this.parser.chain(({ scope }) =>
+//         f(scope).map((value) => ({
+//           value,
+//           scope: <any>Object.assign({ [name]: value }, scope),
+//         }))
+//       )
+//     );
+//   }
 
-  public do<TValue2>(s: ScopedParserComputationStatement<TScope, TValue2>): ScopedParserComputation<TScope, TValue2> {
-    const f: (scope: TScope) => Parser<TValue2> = s instanceof Parser ? () => s : s;
+//   public do<TValue2>(s: ScopedParserComputationStatement<TScope, TValue2>): ScopedParserComputation<TScope, TValue2> {
+//     const f: (scope: TScope) => Parser<TValue2> = s instanceof Parser ? () => s : s;
 
-    return new ScopedParserComputation(
-      this.parser.chain(({ scope }) =>
-        f(scope).map((value) => ({
-          value,
-          scope,
-        }))
-      )
-    );
-  }
-}
+//     return new ScopedParserComputation(
+//       this.parser.chain(({ scope }) =>
+//         f(scope).map((value) => ({
+//           value,
+//           scope,
+//         }))
+//       )
+//     );
+//   }
+// }
 
-export const P = ScopedParserComputation.create;
+// export const comp = ScopedParserComputation.create;
 
-export const anyP: Parser<Token> = new Parser((state: ParserState) => {
+export const takeOne: Parser<Token> = new Parser((state: ParserState) => {
   if (state.offset < state.tokens.length) {
     return {
       status: ParserStatus.Ok,
@@ -186,7 +193,7 @@ export const anyP: Parser<Token> = new Parser((state: ParserState) => {
   };
 });
 
-export const eofP: Parser<null> = new Parser((state: ParserState) => {
+export const eof: Parser<null> = new Parser((state: ParserState) => {
   if (state.offset < state.tokens.length) {
     return {
       status: ParserStatus.Error,
@@ -201,8 +208,8 @@ export const eofP: Parser<null> = new Parser((state: ParserState) => {
   };
 });
 
-export function condP(pred: (token: Token) => boolean, errorMessage?: string): Parser<Token> {
-  return anyP.chain((t) => {
+export function cond(pred: (token: Token) => boolean, errorMessage?: string): Parser<Token> {
+  return takeOne.chain((t) => {
     if (pred(t)) {
       return Parser.pure(t);
     }
@@ -210,11 +217,11 @@ export function condP(pred: (token: Token) => boolean, errorMessage?: string): P
   });
 }
 
-export function tryP<T>(p: Parser<T>): Parser<T | null> {
-  return tryWithDefaultP(p, null);
+export function tryOrNull<T>(p: Parser<T>): Parser<T | null> {
+  return tryOrDefault(p, null);
 }
 
-export function tryWithDefaultP<T, TDefault>(p: Parser<T>, def: TDefault): Parser<T | TDefault> {
+export function tryOrDefault<T, TDefault>(p: Parser<T>, def: TDefault): Parser<T | TDefault> {
   return new Parser((state: ParserState): ParserResult<T | TDefault> => {
     const result = p.run(state);
     if (result.status === ParserStatus.Ok) {
@@ -228,7 +235,7 @@ export function tryWithDefaultP<T, TDefault>(p: Parser<T>, def: TDefault): Parse
   });
 }
 
-export function oneOfP<T>(parsers: Parser<T>[]): Parser<T> {
+export function oneOf<T>(parsers: Parser<T>[]): Parser<T> {
   if (parsers.length === 0) {
     throw new Error("Expected a non-empty list of parsers.");
   }
@@ -245,7 +252,7 @@ export function oneOfP<T>(parsers: Parser<T>[]): Parser<T> {
   });
 }
 
-export function orP<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
+export function or<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
   return new Parser((state: ParserState): ParserResult<T1 | T2> => {
     const r1 = p1.run(state);
     if (r1.status === ParserStatus.Ok) {
@@ -255,7 +262,7 @@ export function orP<T1, T2>(p1: Parser<T1>, p2: Parser<T2>): Parser<T1 | T2> {
   });
 }
 
-export function whileP(pred: (token: Token) => boolean): Parser<Token[]> {
+export function takeWhile(pred: (token: Token) => boolean): Parser<Token[]> {
   return new Parser((state: ParserState) => {
     const result = [];
     let currentState = state;
@@ -279,7 +286,7 @@ export function whileP(pred: (token: Token) => boolean): Parser<Token[]> {
   });
 }
 
-export function manyP<T>(p: Parser<T>): Parser<T[]> {
+export function many<T>(p: Parser<T>): Parser<T[]> {
   return new Parser((state: ParserState) => {
     const result = [];
     let currentState = state;
@@ -300,7 +307,7 @@ export function manyP<T>(p: Parser<T>): Parser<T[]> {
   });
 }
 
-export function manyWithComebackP<T, TComeback>(p: Parser<T>, comeback: Parser<TComeback>) {
+export function manyWithComeback<T, TComeback>(p: Parser<T>, comeback: Parser<TComeback>) {
   return new Parser((state: ParserState) => {
     const result = [];
     let currentState = state;
@@ -330,7 +337,7 @@ export type WithAcc<TValue, TAcc> = {
   acc: TAcc;
 };
 
-export function manyWithAccP<TValue, TAcc>(
+export function manyWithAcc<TValue, TAcc>(
   p: Parser<TValue>,
   accFn: (value: TValue, acc: TAcc) => TAcc,
   initialAcc: TAcc
@@ -360,7 +367,7 @@ export function manyWithAccP<TValue, TAcc>(
   });
 }
 
-export function manyWithAccAndComebackP<TValue, TComeback, TAcc>(
+export function manyWithAccAndComeback<TValue, TComeback, TAcc>(
   p: Parser<TValue>,
   pc: Parser<TComeback>,
   accFn: (value: TValue, acc: TAcc) => TAcc,
@@ -397,7 +404,7 @@ export function manyWithAccAndComebackP<TValue, TComeback, TAcc>(
   });
 }
 
-export function joinP<TValue, TSep>(p: Parser<TValue>, pSep: Parser<TSep>): Parser<TValue[]> {
+export function join<TValue, TSep>(p: Parser<TValue>, pSep: Parser<TSep>): Parser<TValue[]> {
   return p.chain((v) =>
     pSep
       .chain(() => p)
@@ -406,7 +413,7 @@ export function joinP<TValue, TSep>(p: Parser<TValue>, pSep: Parser<TSep>): Pars
   );
 }
 
-export function seqP<T>(parsers: Parser<T>[]): Parser<T[]> {
+export function seq<T>(parsers: Parser<T>[]): Parser<T[]> {
   return new Parser((state: ParserState) => {
     const result = [];
     let currentState = state;
@@ -428,7 +435,7 @@ export function seqP<T>(parsers: Parser<T>[]): Parser<T[]> {
   });
 }
 
-export function flatSeqP<T>(parsers: Parser<T[]>[]): Parser<T[]> {
+export function flatSeq<T>(parsers: Parser<T[]>[]): Parser<T[]> {
   return new Parser((state: ParserState) => {
     const result = [];
     let currentState = state;
@@ -480,8 +487,8 @@ export enum ScopedMode {
   Or = "Or",
 }
 
-export function scopedP(scopes: TokenScope | TokenScope[], mode: ScopedMode = ScopedMode.And) {
-  return condP((t) => {
+export function scoped(scopes: TokenScope | TokenScope[], mode: ScopedMode = ScopedMode.And) {
+  return cond((t) => {
     if (!(scopes instanceof Array)) {
       scopes = [scopes];
     }
@@ -493,7 +500,7 @@ export function scopedP(scopes: TokenScope | TokenScope[], mode: ScopedMode = Sc
 }
 
 export const currentRange: Parser<Range> = new Parser((state: ParserState) => {
-  return anyP
+  return takeOne
     .chain(
       (t) =>
         new Parser((_s) => ({
