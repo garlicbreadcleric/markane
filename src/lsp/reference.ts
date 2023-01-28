@@ -10,10 +10,7 @@ import { findIndicesOf } from "../utils";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 export class ReferenceManager {
-  constructor(
-    protected config: Config,
-    protected documentProvider: DocumentProvider
-  ) {}
+  constructor(protected config: Config, protected documentProvider: DocumentProvider) {}
 
   getReferencesToPath(filePath: string): Location[] {
     const locations: Location[] = [];
@@ -21,9 +18,7 @@ export class ReferenceManager {
     for (const doc of this.documentProvider.documents.values()) {
       const references = markdown.filterElements((e) => {
         if (e.type === "inlineLink" && e.path != null) {
-          return (
-            path.join(path.dirname(doc.filePath), e.path.content) === filePath
-          );
+          return path.join(path.dirname(doc.filePath), e.path.content) === filePath;
         } else if (e.type === "citation") {
           if (e.key.content !== path.basename(filePath, ".md")) {
             return false;
@@ -50,14 +45,8 @@ export class ReferenceManager {
     return locations;
   }
 
-  getMentions(
-    textDocuments: TextDocuments<TextDocument>,
-    document: markdown.MarkdownDocument
-  ): Location[] {
-    const titles = [
-      document.title ?? null,
-      ...(document.metadata?.aliases ?? []),
-    ].filter((x) => x != null);
+  getMentions(textDocuments: TextDocuments<TextDocument>, document: markdown.MarkdownDocument): Location[] {
+    const titles = [document.title ?? null, ...(document.metadata?.aliases ?? [])].filter((x) => x != null);
 
     const locations: Location[] = [];
 
@@ -67,9 +56,7 @@ export class ReferenceManager {
       }
       for (const title of titles) {
         if (doc.source == null) continue;
-        const textDocument = textDocuments.get(
-          url.pathToFileURL(doc.filePath).toString()
-        );
+        const textDocument = textDocuments.get(url.pathToFileURL(doc.filePath).toString());
         if (textDocument == null) continue;
         const startIndices = findIndicesOf(title, doc.source);
 
@@ -78,8 +65,7 @@ export class ReferenceManager {
           const end = textDocument.positionAt(startIndex + title.length);
 
           const element =
-            markdown.getElementAt(doc.elements, start, true) ??
-            markdown.getElementAt(doc.elements, end, true);
+            markdown.getElementAt(doc.elements, start, true) ?? markdown.getElementAt(doc.elements, end, true);
           if (element?.type === "inlineLink") continue;
 
           const location: Location = {

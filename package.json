@@ -5,10 +5,11 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepublish": "npm ruh build",
+    "prepublish": "npm run build",
     "build": "rm -rf ./dist && tsc",
     "buildDev": "rm -rf ./dist && tsc --sourceMap",
-    "format": "fd '\\.ts$' src bin -x npx prettier -w"
+    "format": "fd '\\.ts$' src bin tests -x npx prettier -w",
+    "test": "mocha -r ts-node/register 'tests/**/*-test.ts'"
   },
   "bin": {
     "markane": "bin/markane.js"
@@ -27,9 +28,14 @@
     "yaml": "^2.1.2"
   },
   "devDependencies": {
+    "@types/chai": "^4.3.4",
     "@types/luxon": "^3.0.2",
+    "@types/mocha": "^10.0.1",
     "@types/node": "^18.11.0",
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
     "prettier": "^2.7.1",
+    "ts-node": "^10.9.1",
     "typescript": "^4.8.4"
   }
 }

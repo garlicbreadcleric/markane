@@ -9,11 +9,7 @@ import { Logger } from "../logger";
 
 export class DocumentProvider {
   public documents: Map<string, MarkdownDocument> = new Map();
-  constructor(
-    protected config: Config,
-    protected parser: MarkdownParser,
-    protected logger: Logger
-  ) {}
+  constructor(protected config: Config, protected parser: MarkdownParser, protected logger: Logger) {}
 
   async index() {
     this.documents = new Map();
@@ -30,9 +26,9 @@ export class DocumentProvider {
       }
 
       const folderPath = path.resolve(cwd, folder.path);
-      const files = (
-        await utils.readDirFiles(folderPath, folder.recursive ?? false)
-      ).filter((f) => path.extname(f) === ".md");
+      const files = (await utils.readDirFiles(folderPath, folder.recursive ?? false)).filter(
+        (f) => path.extname(f) === ".md"
+      );
 
       for (const file of files) {
         await this.updateDocument(file);
@@ -40,10 +36,7 @@ export class DocumentProvider {
     }
   }
 
-  async updateDocument(
-    filePath: string,
-    doc: MarkdownDocument | null = null
-  ): Promise<MarkdownDocument | null> {
+  async updateDocument(filePath: string, doc: MarkdownDocument | null = null): Promise<MarkdownDocument | null> {
     if (!this.isPathIncluded(filePath)) return null;
 
     if (doc == null) {
@@ -73,18 +66,12 @@ export class DocumentProvider {
     return doc.preview;
   }
 
-  async getDocumentBySrc(
-    filePath: string,
-    src: string
-  ): Promise<MarkdownDocument> {
+  async getDocumentBySrc(filePath: string, src: string): Promise<MarkdownDocument> {
     const doc = await this.parser.parse(filePath, src);
     return doc;
   }
 
-  async getDocumentByPath(
-    filePath: string,
-    forceNew = false
-  ): Promise<MarkdownDocument | null> {
+  async getDocumentByPath(filePath: string, forceNew = false): Promise<MarkdownDocument | null> {
     if (this.documents.has(filePath) && !forceNew) {
       return this.documents.get(filePath) ?? null;
     }
@@ -98,10 +85,7 @@ export class DocumentProvider {
     return doc;
   }
 
-  async getDocumentByCitationKey(
-    citationKey: string,
-    forceNew = false
-  ): Promise<MarkdownDocument | null> {
+  async getDocumentByCitationKey(citationKey: string, forceNew = false): Promise<MarkdownDocument | null> {
     const cwd = process.cwd();
     for (const folder of this.config?.citations?.folders ?? []) {
       const folderPath = path.join(cwd, folder);

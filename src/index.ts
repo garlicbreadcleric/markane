@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
-import * as lsp from "./lsp";
-import * as cli from "./cli";
 import readline from "readline";
 
+import colors from "colors/safe";
+
+import * as lsp from "./lsp";
+import * as cli from "./cli";
 import * as markdown from "./markdown";
 import { Logger } from "./logger";
 import { getConfig } from "./config";
@@ -56,8 +58,7 @@ const cliParserOptions = {
       options: {
         citationKey: {
           short: "c",
-          description:
-            "Citation key (will output all citation entries if none provided)",
+          description: "Citation key (will output all citation entries if none provided)",
           type: cli.CliCommandOptionType.String,
         },
       },
@@ -67,19 +68,16 @@ const cliParserOptions = {
       options: {},
     },
     parse: {
-      description:
-        "Parse Markdown and show abstract syntax representation (for development purposes only)",
+      description: "Parse Markdown and show abstract syntax representation (for development purposes only)",
       options: {
         input: {
           short: "i",
-          description:
-            "Input file path (will read from stdin if none provided)",
+          description: "Input file path (will read from stdin if none provided)",
           type: cli.CliCommandOptionType.String,
         },
         output: {
           short: "o",
-          description:
-            "Output file path (will write to stdout if none provided)",
+          description: "Output file path (will write to stdout if none provided)",
           type: cli.CliCommandOptionType.String,
         },
         format: {
@@ -89,6 +87,10 @@ const cliParserOptions = {
           default: "markane",
         },
       },
+    },
+    "parse-interactive": {
+      description: "Parse Markdown interactively (for development purposes only)",
+      options: {},
     },
     help: {
       description: "Show help message",
@@ -149,9 +151,7 @@ export async function main() {
     case "bibliography": {
       await citationProvider.index();
       if (cliOptions.options.citationKey != null) {
-        const entry = citationProvider.getByCitationKey(
-          cliOptions.options.citationKey
-        );
+        const entry = citationProvider.getByCitationKey(cliOptions.options.citationKey);
         console.log(JSON.stringify(entry));
       } else {
         console.log(JSON.stringify(citationProvider.bibliography));
@@ -159,16 +159,9 @@ export async function main() {
       break;
     }
     case "lsp":
-      lsp.runLspServer(
-        config,
-        logger,
-        documentProvider,
-        citationProvider,
-        templateProvider,
-        snippetProvider
-      );
+      lsp.runLspServer(config, logger, documentProvider, citationProvider, templateProvider, snippetProvider);
       break;
-    case "parse":
+    case "parse": {
       let input = null;
       if (cliOptions.options.input == null) {
         input = await readStdin();
@@ -186,19 +179,39 @@ export async function main() {
           const lines = await tokenizer.tokenize("text.html.markdown", input);
           for (const line of lines) {
             for (const { start, end, scopes, content } of line) {
-              console.log(
-                JSON.stringify(
-                  { start, end, scopes: scopes.join(", "), content },
-                  null,
-                  2
-                )
-              );
+              console.log(JSON.stringify({ start, end, scopes: scopes.join(", "), content }, null, 2));
             }
           }
           break;
         }
       }
       break;
+    }
+    case "parse-interactive": {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      function interactive(acc: string[] = []) {
+        rl.question(colors.cyan("> "), async (answer) => {
+          if (answer === "") {
+            console.log(acc.join("\n"));
+            try {
+              const elements = (await markdownParser.parse("input.md", acc.join("\n"))).elements;
+              console.log(JSON.stringify(elements, null, 2));
+            } catch (e: any) {
+              if (e instanceof Error) {
+                console.error(e.stack);
+              } else {
+                console.error(e);
+              }
+            }
+            interactive();
+          } else {
+            interactive([...acc, answer]);
+          }
+        });
+      }
+      interactive();
+      break;
+    }
     case "help":
       console.log(cliParser.help());
       break;

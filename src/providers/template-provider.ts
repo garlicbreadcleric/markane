@@ -6,13 +6,7 @@ import slugify from "slugify";
 import { DateTime } from "luxon";
 
 import { Config, FolderConfig } from "../config";
-import {
-  execCommand,
-  handlebarsOptions,
-  isFileReadable,
-  readFile,
-  writeFile,
-} from "../utils";
+import { execCommand, handlebarsOptions, isFileReadable, readFile, writeFile } from "../utils";
 import { Logger } from "../logger";
 import { BibliographyEntry } from "./citation-provider";
 
@@ -36,26 +30,19 @@ export class TemplateProvider {
       const isTemplateFileReadable = await isFileReadable(filePath);
 
       if (isTemplateFileReadable) {
-        const template = await readFile(filePath).then((data) =>
-          data.toString()
-        );
+        const template = await readFile(filePath).then((data) => data.toString());
         return template;
       }
     }
 
-    this.logger.warn(
-      `Could not find the template '${templateName}' in specified template folders.`
-    );
+    this.logger.warn(`Could not find the template '${templateName}' in specified template folders.`);
 
     return null;
   }
 
   getFolderConfig(folderPath: string): FolderConfig | null {
     for (const folder of this.config.folders ?? []) {
-      if (
-        folder.path != null &&
-        !path.relative(folder.path, folderPath).startsWith("../")
-      ) {
+      if (folder.path != null && !path.relative(folder.path, folderPath).startsWith("../")) {
         return folder;
       }
     }
@@ -70,13 +57,9 @@ export class TemplateProvider {
     const fileNameTemplateSource = folderConfig?.file ?? "{{ slug title }}.md";
     let fileContentTemplateSource = "";
     if (options.template != null) {
-      fileContentTemplateSource =
-        (await this.getTemplateSource(options.template)) ??
-        fileContentTemplateSource;
+      fileContentTemplateSource = (await this.getTemplateSource(options.template)) ?? fileContentTemplateSource;
     } else if (folderConfig?.template != null) {
-      fileContentTemplateSource =
-        (await this.getTemplateSource(folderConfig.template)) ??
-        fileContentTemplateSource;
+      fileContentTemplateSource = (await this.getTemplateSource(folderConfig.template)) ?? fileContentTemplateSource;
     }
 
     const fileNameTemplate = handlebars.compile(fileNameTemplateSource);
@@ -97,10 +80,7 @@ export class TemplateProvider {
   }
 
   async createFile(folderPath: string, options: Partial<CreateFileOptions>) {
-    const { filePath, fileContent } = await this.prepareToCreateFile(
-      folderPath,
-      options
-    );
+    const { filePath, fileContent } = await this.prepareToCreateFile(folderPath, options);
 
     if (await isFileReadable(filePath)) {
       this.logger.warn(`Cannot create file ${filePath} as it already exists.`);

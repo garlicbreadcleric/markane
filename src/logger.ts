@@ -29,10 +29,7 @@ export class Logger {
   protected readonly level: LogLevel = LogLevel.Info;
 
   constructor(protected config: Config) {
-    if (
-      config.logLevel != null &&
-      logLevelToInt(<LogLevel>config.logLevel) != -1
-    ) {
+    if (config.logLevel != null && logLevelToInt(<LogLevel>config.logLevel) != -1) {
       this.level = <LogLevel>config.logLevel;
     }
   }

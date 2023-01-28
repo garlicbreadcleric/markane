@@ -30,9 +30,7 @@ export class SnippetProvider {
 
       for (const filePath of filePaths) {
         if (path.extname(filePath) !== ".md") continue;
-        const text = await readFile(path.join(folderPath, filePath)).then(
-          (data) => data.toString()
-        );
+        const text = await readFile(path.join(folderPath, filePath)).then((data) => data.toString());
 
         this.snippets.push({
           title: filePath.split(".").slice(0, -1).join("."),

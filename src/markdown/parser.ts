@@ -1,14 +1,8 @@
-import {
-  getTokensContent,
-  getTokensRange,
-  hasScope,
-  Token,
-  Tokenizer,
-  withinLine,
-} from "../parsec/tokenizer";
+import * as yaml from "yaml";
+
+import { getTokensContent, getTokensRange, hasScope, Token, Tokenizer, withinLine } from "../parsec/tokenizer";
 import * as parsec from "../parsec";
 import { flatten, notPredicate } from "../utils";
-import * as yaml from "yaml";
 import {
   elementBaseFromTokens,
   findElement,
@@ -28,41 +22,34 @@ import {
 } from "./types";
 import { documentPreview } from "./preview";
 
-export const parseFrontmatter: parsec.Parser<MarkdownFrontmatter> = parsec
-  .scopedP("text.html.markdown")
-  .check((t) => t.content === "---") // TODO: trim before check?
-  .chain((fbBegin) =>
-    parsec
-      .scopedP("meta.embedded.block.frontmatter")
-      .many()
-      .chain((fmTokens) =>
-        parsec
-          .scopedP("text.html.markdown")
-          .check((t) => t.content === "---")
-          .chain((fmEnd) => {
-            const allTokens = flatten([[fbBegin], fmTokens, [fmEnd]]);
-            const content = getTokensContent(allTokens);
-            const { start, end } = getTokensRange(allTokens)!;
+const fmDashes = parsec.scoped("text.html.markdown").check((t) => t.content === "---");
 
-            try {
-              const metadata = yaml.parse(getTokensContent(fmTokens));
+const parseFrontmatter: parsec.Parser<MarkdownFrontmatter> = parsec.init
+  .bind("fmBegin", fmDashes)
+  .bind("fmTokens", parsec.scoped("meta.embedded.block.frontmatter").many())
+  .bind("fmEnd", fmDashes)
+  .chain(({ fmBegin, fmTokens, fmEnd }) => {
+    const allTokens = [fmBegin, ...fmTokens, fmEnd];
+    const content = getTokensContent(allTokens);
+    const { start, end } = getTokensRange(allTokens)!;
 
-              return parsec.Parser.pure<MarkdownFrontmatter>({
-                type: "frontmatter",
-                content,
-                start,
-                end,
-                metadata,
-              });
-            } catch (e: any) {
-              return parsec.Parser.fail(e.toString());
-            }
-          })
-      )
-  );
+    try {
+      const metadata = yaml.parse(getTokensContent(fmTokens));
+
+      return parsec.Parser.pure({
+        type: "frontmatter",
+        content,
+        start,
+        end,
+        metadata,
+      });
+    } catch (e: any) {
+      return parsec.Parser.fail(e.toString());
+    }
+  }, "parseFrontmatter");
 
 export const parseComment: parsec.Parser<MarkdownComment> = parsec
-  .scopedP("comment.block.html")
+  .scoped("comment.block.html")
   .many1()
   .map((tokens) => {
     const { start, end } = getTokensRange(tokens)!;
@@ -73,48 +60,37 @@ export const parseComment: parsec.Parser<MarkdownComment> = parsec
       end,
       content,
     };
-  });
+  }, "parseComment");
 
-export const parseInlineLink: parsec.Parser<MarkdownInlineLink> = parsec
-  .seqP([
-    parsec
-      .scopedP([
-        "punctuation.definition.link.title.begin.markdown",
-        "meta.link.inline.markdown",
-      ])
-      .singleton(),
-    parsec.scopedP("string.other.link.title.markdown").many(),
-    parsec
-      .scopedP("punctuation.definition.link.title.end.markdown")
-      .singleton(),
+export const parseInlineLink: parsec.Parser<MarkdownInlineLink> = parsec.init
+  .bind("titleBegin", parsec.scoped(["punctuation.definition.link.title.begin.markdown", "meta.link.inline.markdown"]))
+  .bind("titleTokens", parsec.scoped("string.other.link.title.markdown").many())
+  .bind("titleEnd", parsec.scoped("punctuation.definition.link.title.end.markdown"))
+  .bind(
+    "pathBegin",
+    parsec.scoped("punctuation.definition.metadata.markdown").check((t) => t.content === "(")
+  )
+  .bind("pathTokens", parsec.scoped("markup.underline.link.markdown").many())
+  .bind(
+    "pathEnd",
+    parsec.scoped("punctuation.definition.metadata.markdown").check((t) => t.content === ")")
+  )
 
-    parsec
-      .scopedP("punctuation.definition.metadata.markdown")
-      .check((t) => t.content === "(")
-      .singleton(),
-    parsec.scopedP("markup.underline.link.markdown").many(),
-    parsec
-      .scopedP("punctuation.definition.metadata.markdown")
-      .check((t) => t.content === ")")
-      .singleton(),
-  ])
-  .map((tokenGroups) => {
-    const [titleBegin, titleTokens, titleEnd, pathBegin, pathTokens, pathEnd] =
-      tokenGroups;
-    const allTokens = flatten(tokenGroups);
+  .map(({ titleBegin, titleTokens, titleEnd, pathBegin, pathTokens, pathEnd }) => {
+    const allTokens = [titleBegin, ...titleTokens, titleEnd, pathBegin, ...pathTokens, pathEnd];
 
     const content = getTokensContent(allTokens);
     const { start, end } = getTokensRange(allTokens)!;
 
     const title = elementBaseFromTokens(titleTokens) ?? {
       content: "",
-      start: titleBegin[titleBegin.length - 1].end,
-      end: titleEnd[0].start,
+      start: titleBegin.end,
+      end: titleEnd.start,
     };
     const path = elementBaseFromTokens(pathTokens) ?? {
       content: "",
-      start: pathBegin[pathBegin.length - 1].end,
-      end: pathEnd[0].start,
+      start: pathBegin.end,
+      end: pathEnd.start,
     };
 
     return {
@@ -125,126 +101,103 @@ export const parseInlineLink: parsec.Parser<MarkdownInlineLink> = parsec
       title,
       path,
     };
-  });
+  }, "parseInlineLink");
+
+export const parseShortReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.init
+  .bind("refBegin", parsec.scoped(["punctuation.definition.link.title.begin.markdown", "meta.link.reference.markdown"]))
+  .bind(
+    "refTokens",
+    parsec
+      .scoped("meta.link.reference.markdown")
+      .check(notPredicate(hasScope("punctuation.definition.link.title.end.markdown")))
+      .many()
+  )
+  .bind("refEnd", parsec.scoped("punctuation.definition.link.title.end.markdown"))
+
+  .map(({ refBegin, refTokens, refEnd }) => {
+    const allTokens = [refBegin, ...refTokens, refEnd];
+
+    const { start, end } = getTokensRange(allTokens)!;
+    const content = getTokensContent(allTokens);
+
+    const reference = elementBaseFromTokens(refTokens);
+
+    return {
+      type: "referenceLink",
+      start,
+      end,
+      content,
+      reference,
+      title: null,
+    };
+  }, "parseShortReferenceLink");
+
+export const parseFullReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec.init
+  .bind(
+    "titleBegin",
+    parsec.scoped(["punctuation.definition.link.title.begin.markdown", "meta.link.reference.markdown"])
+  )
+  .bind(
+    "titleTokens",
+    parsec
+      .scoped("meta.link.reference.markdown")
+      .check(notPredicate(hasScope("punctuation.definition.link.title.end.markdown")))
+      .many()
+  )
+  .bind("titleEnd", parsec.scoped("punctuation.definition.link.title.end.markdown"))
+  .bind("refBegin", parsec.scoped(["meta.link.reference.markdown", "punctuation.definition.constant.begin.markdown"]))
+  .bind(
+    "refTokens",
+    parsec
+      .scoped(["meta.link.reference.markdown", "constant.other.reference.link.markdown"])
+      .check(notPredicate(hasScope("punctuation.definition.constant.end.markdown")))
+      .many()
+  )
+  .bind("refEnd", parsec.scoped("punctuation.definition.constant.end.markdown"))
+
+  .map(({ titleBegin, titleTokens, titleEnd, refBegin, refTokens, refEnd }) => {
+    const allTokens = [titleBegin, ...titleTokens, titleEnd, refBegin, ...refTokens, refEnd];
+    const { start, end } = getTokensRange(allTokens)!;
+    const content = getTokensContent(allTokens);
+
+    const reference = elementBaseFromTokens(refTokens);
+    const title = elementBaseFromTokens(titleTokens);
+
+    return {
+      type: "referenceLink",
+      start,
+      end,
+      content,
+      reference,
+      title,
+    };
+  }, "parseFullReferenceLink");
 
 export const parseReferenceLink: parsec.Parser<MarkdownReferenceLink> = parsec
-  .seqP([
+  .oneOf([parseFullReferenceLink, parseShortReferenceLink])
+  .withName("parseReferenceLink");
+
+export const parseInlineImage: parsec.Parser<MarkdownInlineImage> = parsec.init
+  .bind(
+    "titleBegin",
+    parsec.scoped(["meta.image.inline.markdown", "punctuation.definition.link.description.begin.markdown"])
+  )
+  .bind(
+    "titleTokens",
     parsec
-      .scopedP([
-        "punctuation.definition.link.title.begin.markdown",
-        "meta.link.reference.markdown",
-      ])
-      .singleton(),
-    parsec
-      .scopedP("meta.link.reference.markdown")
-      .check(
-        notPredicate(hasScope("punctuation.definition.link.title.end.markdown"))
-      )
-      .many(),
-    parsec
-      .scopedP("punctuation.definition.link.title.end.markdown")
-      .singleton(),
-  ])
-  .chain((firstGroup) => {
-    return parsec
-      .seqP([
-        parsec
-          .scopedP([
-            "meta.link.reference.markdown",
-            "punctuation.definition.constant.begin.markdown",
-          ])
-          .singleton(),
-        parsec
-          .scopedP([
-            "meta.link.reference.markdown",
-            "constant.other.reference.link.markdown",
-          ])
-          .check(
-            notPredicate(
-              hasScope("punctuation.definition.constant.end.markdown")
-            )
-          )
-          .many(),
-        parsec
-          .scopedP("punctuation.definition.constant.end.markdown")
-          .singleton(),
-      ])
-      .try()
-      .map((secondGroup): MarkdownReferenceLink => {
-        if (secondGroup == null) {
-          const allTokens = flatten(firstGroup);
-          const [refBegin, refTokens, refEnd] = firstGroup;
-
-          const { start, end } = getTokensRange(allTokens)!;
-          const content = getTokensContent(allTokens);
-
-          const reference = elementBaseFromTokens(refTokens);
-
-          return {
-            type: "referenceLink",
-            start,
-            end,
-            content,
-            reference,
-            title: null,
-          };
-        } else {
-          const allTokens = flatten([
-            flatten(firstGroup),
-            flatten(secondGroup),
-          ]);
-          const [titleBegin, titleTokens, titleEnd] = firstGroup;
-          const [refBegin, refTokens, refEnd] = secondGroup;
-
-          const { start, end } = getTokensRange(allTokens)!;
-          const content = getTokensContent(allTokens);
-
-          const reference = elementBaseFromTokens(refTokens);
-          const title = elementBaseFromTokens(titleTokens);
-
-          return {
-            type: "referenceLink",
-            start,
-            end,
-            content,
-            reference,
-            title,
-          };
-        }
-      });
-  });
-
-export const parseInlineImage: parsec.Parser<MarkdownInlineImage> = parsec
-  .seqP([
-    parsec
-      .scopedP([
-        "meta.image.inline.markdown",
-        "punctuation.definition.link.description.begin.markdown",
-      ])
-      .singleton(),
-    parsec
-      .scopedP("meta.image.inline.markdown")
-      .check(
-        notPredicate(
-          hasScope("punctuation.definition.link.description.end.markdown")
-        )
-      )
-      .many(),
-    parsec
-      .scopedP("punctuation.definition.link.description.end.markdown")
-      .singleton(),
-
-    parsec.scopedP("punctuation.definition.metadata.markdown").singleton(),
-    parsec.scopedP("markup.underline.link.image.markdown").many(),
-    parsec
-      .scopedP("punctuation.definition.metadata.markdown")
-      .check((t) => t.content === ")")
-      .singleton(),
-  ])
-  .map((tokenGroups) => {
-    const [titleBegin, titleTokens, titleEnd, pathBegin, pathTokens, pathEnd] =
-      tokenGroups;
-    const allTokens = flatten(tokenGroups);
+      .scoped("meta.image.inline.markdown")
+      .check(notPredicate(hasScope("punctuation.definition.link.description.end.markdown")))
+      .many()
+  )
+  .bind("titleEnd", parsec.scoped("punctuation.definition.link.description.end.markdown"))
+  .bind("pathBegin", parsec.scoped("punctuation.definition.metadata.markdown"))
+  .bind("pathTokens", parsec.scoped("markup.underline.link.image.markdown").many())
+  .bind(
+    "pathEnd",
+    parsec.scoped("punctuation.definition.metadata.markdown").check((t) => t.content === ")")
+  )
+  .map(({ titleBegin, titleTokens, titleEnd, pathBegin, pathTokens, pathEnd }) => {
+    const allTokens = [titleBegin, ...titleTokens, titleEnd, pathBegin, ...pathTokens, pathEnd];
 
     const { start, end } = getTokensRange(allTokens)!;
     const content = getTokensContent(allTokens);
@@ -260,260 +213,214 @@ export const parseInlineImage: parsec.Parser<MarkdownInlineImage> = parsec
       title,
       path,
     };
-  });
+  }, "parseInlineImage");
 
 export const parseReferenceImage = null; // TODO.
 
-export const parseSimpleCitation: parsec.Parser<MarkdownCitation> = parsec
-  .scopedP("entity.name.citationKey")
-  .check(notPredicate(hasScope("entity.name.citationKey.identifier")))
-  .check((t) => t.content === "@")
-  .chain((first) =>
+export const parseSimpleCitation: parsec.Parser<MarkdownCitation> = parsec.init
+  .bind(
+    "keyBegin",
     parsec
-      .scopedP("entity.name.citationKey.identifier")
-      .many1()
-      .map((keyTokens) => {
-        const allTokens = [first].concat(keyTokens);
-        const content = getTokensContent(allTokens);
-        const { start, end } = getTokensRange(allTokens)!;
+      .scoped("entity.name.citationKey")
+      .check(notPredicate(hasScope("entity.name.citationKey.identifier")))
+      .check((t) => t.content === "@")
+  )
+  .bind("keyTokens", parsec.scoped("entity.name.citationKey.identifier").many1())
+  .map(({ keyBegin, keyTokens }) => {
+    const allTokens = [keyBegin, ...keyTokens];
+    const content = getTokensContent(allTokens);
+    const { start, end } = getTokensRange(allTokens)!;
 
-        const key = elementBaseFromTokens(keyTokens)!;
+    const key = elementBaseFromTokens(keyTokens)!;
 
-        return {
-          type: "citation",
-          start,
-          end,
-          content,
-          key,
-        };
-      })
-  );
-export const parseEscapedCitation: parsec.Parser<MarkdownCitation> = parsec
-  .scopedP("entity.name.citationKey")
-  .check(notPredicate(hasScope("entity.name.citationKey.identifier")))
-  .check((t) => t.content === "@{")
-  .chain((first) =>
+    return {
+      type: "citation",
+      start,
+      end,
+      content,
+      key,
+    };
+  }, "parseSimpleCitation");
+
+export const parseEscapedCitation: parsec.Parser<MarkdownCitation> = parsec.init
+  .bind(
+    "keyBegin",
     parsec
-      .scopedP("entity.name.citationKey.identifier")
-      .many1()
-      .chain((keyTokens) =>
-        parsec
-          .scopedP("entity.name.citationKey")
-          .check(notPredicate(hasScope("entity.name.citationKey.identifier")))
-          .check((t) => t.content === "}")
-          .map((last) => {
-            const allTokens = flatten([[first], keyTokens, [last]]);
-            const content = getTokensContent(allTokens);
-            const { start, end } = getTokensRange(allTokens)!;
+      .scoped("entity.name.citationKey")
+      .check(notPredicate(hasScope("entity.name.citationKey.identifier")))
+      .check((t) => t.content === "@{")
+  )
+  .bind("keyTokens", parsec.scoped("entity.name.citationKey.identifier").many1())
+  .bind(
+    "keyEnd",
+    parsec
+      .scoped("entity.name.citationKey")
+      .check(notPredicate(hasScope("entity.name.citationKey.identifier")))
+      .check((t) => t.content === "}")
+  )
+  .map(({ keyBegin, keyTokens, keyEnd }) => {
+    const allTokens = [keyBegin, ...keyTokens, keyEnd];
+    const content = getTokensContent(allTokens);
+    const { start, end } = getTokensRange(allTokens)!;
 
-            const key = elementBaseFromTokens(keyTokens)!;
+    const key = elementBaseFromTokens(keyTokens)!;
 
-            return {
-              type: "citation",
-              start,
-              end,
-              content,
-              key,
-            };
-          })
+    return {
+      type: "citation",
+      start,
+      end,
+      content,
+      key,
+    };
+  }, "parseEscapedCitation");
+
+export const parseCitation = parsec.oneOf([parseEscapedCitation, parseSimpleCitation]).withName("parseCitation");
+
+export const parseHeading: parsec.Parser<MarkdownHeading> = parsec.currentStartLine.chain((l) => {
+  const headingDefinitionScope = "punctuation.definition.heading.markdown";
+  const parseHeadingPunctuation = parsec.scoped(headingDefinitionScope);
+
+  const parseInline = parsec.init
+    .bind("start", parsec.lastEndPosition)
+    .bind(
+      "elementsWithContent",
+      parsec.manyWithAccAndComeback(
+        parsec.oneOf<MarkdownInlineElement>([parseInlineLink, parseReferenceLink, parseCitation]).check(withinLine(l)),
+        parsec.takeOne.check(withinLine(l)).check(notPredicate(hasScope(headingDefinitionScope))),
+        (element, s) => s + element.content,
+        (token, s) => s + token.content,
+        ""
       )
-  );
-export const parseCitation = parsec.oneOfP([
-  parseEscapedCitation,
-  parseSimpleCitation,
-]);
-
-export const parseHeading: parsec.Parser<MarkdownHeading> =
-  parsec.currentStartLine.chain((l) => {
-    const headingDefinitionScope = "punctuation.definition.heading.markdown";
-    const parseHeadingPunctuation = parsec.scopedP(headingDefinitionScope);
-
-    const parseInline = parsec.lastEndPosition.chain((start) =>
-      parsec
-        .manyWithAccAndComebackP(
-          parsec
-            .oneOfP<MarkdownInlineElement>([
-              parseInlineLink,
-              parseReferenceLink,
-              parseCitation,
-            ])
-            .check(withinLine(l)),
-          parsec.anyP
-            .check(withinLine(l))
-            .check(notPredicate(hasScope(headingDefinitionScope))),
-          (element, s) => s + element.content,
-          (token, s) => s + token.content,
-          ""
-        )
-        .chain(({ value: elements, acc: content }) =>
-          parsec.lastEndPosition.map((end) => ({
-            start,
-            end,
-            content,
-            elements,
-          }))
-        )
-    );
-
-    return parseHeadingPunctuation
-      .check(withinLine(l))
-      .chain((headingBegin) => {
-        return parseInline.chain((headingTitle) => {
-          return parseHeadingPunctuation
-            .check(withinLine(l))
-            .many()
-            .map((headingEnd) => {
-              const level =
-                [1, 2, 3, 4, 5, 6].find((l) =>
-                  headingBegin.scopes.includes(`heading.${l}.markdown`)
-                ) ?? 1;
-              const start = headingBegin.start;
-              const end =
-                headingEnd != null && headingEnd.length > 0
-                  ? headingEnd[headingEnd.length - 1].end
-                  : headingTitle.end;
-
-              return {
-                type: "heading",
-                start,
-                end,
-                content:
-                  getTokensContent([headingBegin]) +
-                  headingTitle.content +
-                  getTokensContent(headingEnd),
-                title: trimElement(headingTitle),
-                level,
-                children: headingTitle.elements,
-              };
-            });
-        });
-      });
-  });
-
-export const parseFencedCode: parsec.Parser<MarkdownFencedCode> =
-  parsec.currentStartLine
-    .chain((l) =>
-      parsec.seqP([
-        parsec
-          .scopedP([
-            "markup.fenced_code.block.markdown",
-            "punctuation.definition.markdown",
-          ])
-          .check(withinLine(l))
-          .singleton(),
-        parsec
-          .scopedP("markup.fenced_code.block.markdown")
-          .check(notPredicate(hasScope("fenced_code.block.language")))
-          .check(withinLine(l))
-          .many(),
-
-        parsec
-          .scopedP([
-            "markup.fenced_code.block.markdown",
-            "fenced_code.block.language",
-          ])
-          .singleton()
-          .tryWithDefault([]),
-        parsec
-          .scopedP("markup.fenced_code.block.markdown")
-          .check(notPredicate(hasScope("punctuation.definition.markdown")))
-          .many(),
-        parsec.scopedP("punctuation.definition.markdown").singleton(),
-      ])
     )
-    .map((tokenGroups) => {
-      const [beginTokens, junkTokens, languageTokens, codeTokens, endTokens] =
-        tokenGroups;
-      const allTokens = flatten(tokenGroups);
+    .bind("end", parsec.lastEndPosition)
+    .map(({ start, elementsWithContent: { value: elements, acc: content }, end }) => ({
+      start,
+      end,
+      content,
+      elements,
+    }));
 
-      const { start, end } = getTokensRange(allTokens)!;
-      const content = getTokensContent(allTokens);
-
-      const language =
-        languageTokens.length > 0
-          ? getTokensContent(languageTokens).trim()
-          : null;
-      const code = getTokensContent(codeTokens);
+  return parsec.init
+    .bind("headingBegin", parseHeadingPunctuation.check(withinLine(l)))
+    .bind("headingContent", parseInline)
+    .bind("headingEnd", parseHeadingPunctuation.check(withinLine(l)).many())
+    .map(({ headingBegin, headingContent, headingEnd }) => {
+      const level = [1, 2, 3, 4, 5, 6].find((l) => headingBegin.scopes.includes(`heading.${l}.markdown`)) ?? 1;
+      const start = headingBegin.start;
+      const end =
+        headingEnd != null && headingEnd.length > 0 ? headingEnd[headingEnd.length - 1].end : headingContent.end;
 
       return {
-        type: "fencedCode",
+        type: "heading",
         start,
         end,
-        content,
-        language,
-        code,
+        content: getTokensContent([headingBegin]) + headingContent.content + getTokensContent(headingEnd),
+        title: trimElement(headingContent),
+        level,
+        children: headingContent.elements,
       };
     });
+}, "parseHeading");
 
-export const parseFencedDiv: parsec.Parser<MarkdownFencedDiv> =
-  parsec.currentStartLine
-    .chain((l) =>
-      parsec.seqP([
-        parsec
-          .scopedP("punctuation.definition.fenced_div.begin.markdown")
-          .singleton(),
-        parsec
-          .scopedP("markup.fenced_div.block.markdown")
-          .check(withinLine(l))
-          .check(notPredicate(hasScope("fenced_div.block.attributes.markdown")))
-          .many(),
-        parsec
-          .scopedP("fenced_div.block.attributes.markdown")
-          .check(withinLine(l))
-          .singleton()
-          .tryWithDefault([]),
-        parsec
-          .scopedP("markup.fenced_div.block.markdown")
-          .check(withinLine(l))
-          .many(),
-      ])
-    )
-    .chain((beginTokenGroups) =>
-      parseElements(
-        parsec.anyP.check(
-          notPredicate(
-            hasScope("punctuation.definition.fenced_div.end.markdown")
-          )
-        )
-      ).chain((children) =>
-        parsec
-          .scopedP("punctuation.definition.fenced_div.end.markdown")
-          .map((endToken): MarkdownFencedDiv => {
-            const beginTokens = flatten(beginTokenGroups);
-            const attributesTokens = beginTokenGroups[2];
-            const beginToken = beginTokens[0];
-            const { start, end } = getTokensRange([beginToken, endToken])!;
+export const parseFencedCode: parsec.Parser<MarkdownFencedCode> = parsec.init
+  .bind("l", parsec.currentStartLine)
+  .bind("beginToken", ({ l }) =>
+    parsec.scoped(["markup.fenced_code.block.markdown", "punctuation.definition.markdown"]).check(withinLine(l))
+  )
+  .bind("junkTokens", ({ l }) =>
+    parsec
+      .scoped("markup.fenced_code.block.markdown")
+      .check(notPredicate(hasScope("fenced_code.block.language")))
+      .check(withinLine(l))
+      .many()
+  )
+  .bind("languageToken", parsec.scoped(["markup.fenced_code.block.markdown", "fenced_code.block.language"]).try())
+  .bind(
+    "codeTokens",
+    parsec
+      .scoped("markup.fenced_code.block.markdown")
+      .check(notPredicate(hasScope("punctuation.definition.markdown")))
+      .many()
+  )
+  .bind("endToken", parsec.scoped("punctuation.definition.markdown"))
+  .map(({ beginToken, junkTokens, languageToken, codeTokens, endToken }) => {
+    const allTokens = [
+      beginToken,
+      ...junkTokens,
+      ...(languageToken == null ? [] : [languageToken]),
+      ...codeTokens,
+      endToken,
+    ];
 
-            let content = getTokensContent(beginTokens);
-            let lastLine = beginTokens[beginTokens.length - 1].end.line;
+    const { start, end } = getTokensRange(allTokens)!;
+    const content = getTokensContent(allTokens);
 
-            for (const child of children) {
-              if (child.start.line > lastLine) {
-                content += "\n".repeat(child.start.line - lastLine);
-              }
-              lastLine = child.end.line;
-              content += child.content;
-            }
+    const language = languageToken?.content?.trim() ?? null;
+    const code = getTokensContent(codeTokens);
 
-            if (endToken.start.line > lastLine) {
-              content += "\n".repeat(endToken.start.line - lastLine);
-            }
-            content += endToken.content;
+    return {
+      type: "fencedCode",
+      start,
+      end,
+      content,
+      language,
+      code,
+    };
+  }, "parseFencedCode");
 
-            return {
-              type: "fencedDiv",
-              start,
-              end,
-              content,
-              attributes: getTokensContent(attributesTokens),
-              children,
-            };
-          })
-      )
-    );
+export const parseFencedDiv: parsec.Parser<MarkdownFencedDiv> = parsec.init
+  .bind("l", parsec.currentStartLine)
+  .bind("beginToken", parsec.scoped("punctuation.definition.fenced_div.begin.markdown"))
+  .bind("beginJunkTokens1", ({ l }) =>
+    parsec
+      .scoped("markup.fenced_div.block.markdown")
+      .check(withinLine(l))
+      .check(notPredicate(hasScope("fenced_div.block.attributes.markdown")))
+      .many()
+  )
+  .bind("attributesToken", ({ l }) => parsec.scoped("fenced_div.block.attributes.markdown").check(withinLine(l)).try())
+  .bind("beginJunkTokens2", ({ l }) => parsec.scoped("markup.fenced_div.block.markdown").check(withinLine(l)).many())
+  .bind("children", () =>
+    parseElements(parsec.takeOne.check(notPredicate(hasScope("punctuation.definition.fenced_div.end.markdown"))))
+  )
+  .bind("endToken", parsec.scoped("punctuation.definition.fenced_div.end.markdown"))
+  .map(({ beginToken, beginJunkTokens1, attributesToken, beginJunkTokens2, children, endToken }) => {
+    const { start, end } = getTokensRange([beginToken, endToken])!;
 
-export const parseElement: parsec.Parser<MarkdownElement> =
-  parsec.oneOfP<MarkdownElement>([
+    const beginTokens = [
+      beginToken,
+      ...beginJunkTokens1,
+      ...(attributesToken == null ? [] : [attributesToken]),
+      ...beginJunkTokens2,
+    ];
+    let content = getTokensContent(beginTokens);
+    let lastLine = beginTokens.at(-1)!.end.line;
+
+    for (const child of children) {
+      if (child.start.line > lastLine) {
+        content += "\n".repeat(child.start.line - lastLine);
+      }
+      lastLine = child.end.line;
+      content += child.content;
+    }
+
+    if (endToken.start.line > lastLine) {
+      content += "\n".repeat(endToken.start.line - lastLine);
+    }
+    content += endToken.content;
+
+    return {
+      type: "fencedDiv",
+      start,
+      end,
+      content,
+      attributes: attributesToken?.content ?? "",
+      children,
+    };
+  }, "parseFencedDiv");
+
+export const parseElement: parsec.Parser<MarkdownElement> = parsec
+  .oneOf<MarkdownElement>([
     parseFencedCode,
     parseFencedDiv,
     parseHeading,
@@ -521,17 +428,15 @@ export const parseElement: parsec.Parser<MarkdownElement> =
     parseReferenceLink,
     parseInlineImage,
     parseCitation,
-  ]);
+  ])
+  .withName("parseElement");
 
-export function parseElements(
-  tokenComeback: parsec.Parser<Token> | null = null
-): parsec.Parser<MarkdownElement[]> {
+export function parseElements(tokenComeback: parsec.Parser<Token> | null = null): parsec.Parser<MarkdownElement[]> {
   return parsec
-    .manyWithAccAndComebackP<MarkdownElement, Token, MarkdownElement[]>(
+    .manyWithAccAndComeback<MarkdownElement, Token, MarkdownElement[]>(
       parseElement,
-      tokenComeback ?? parsec.anyP,
-      (element: MarkdownElement, acc: MarkdownElement[]) =>
-        acc.concat([element]),
+      tokenComeback ?? parsec.takeOne,
+      (element: MarkdownElement, acc: MarkdownElement[]) => acc.concat([element]),
       (token: Token, acc: MarkdownElement[]) => {
         if (acc.length === 0 || acc[acc.length - 1].type != "raw") {
           return acc.concat([
@@ -564,38 +469,33 @@ export function parseElements(
       },
       []
     )
-    .map(({ acc }) => acc);
+    .map(({ acc }) => acc, "parseElements");
 }
 
-export function parseDocument(
-  filePath: string
-): parsec.Parser<MarkdownDocument> {
-  return parseFrontmatter.tryWithDefault(null).chain((frontmatter) =>
-    parseElements().map((elements) => {
-      let title = null;
-      if (frontmatter?.metadata?.title != null) {
-        title = frontmatter.metadata.title;
-      } else {
-        const h1 = <MarkdownHeading>(
-          findElement((e) => e.type === "heading" && e.level === 1, elements)
-        );
-        if (h1 != null) {
-          title = h1.title.content;
+export function parseDocument(filePath: string): parsec.Parser<MarkdownDocument> {
+  return parseFrontmatter.tryWithDefault(null).chain(
+    (frontmatter) =>
+      parseElements().map((elements) => {
+        let title = null;
+        if (frontmatter?.metadata?.title != null) {
+          title = frontmatter.metadata.title;
+        } else {
+          const h1 = <MarkdownHeading>findElement((e) => e.type === "heading" && e.level === 1, elements);
+          if (h1 != null) {
+            title = h1.title.content;
+          }
         }
-      }
 
-      const elementsWithFm =
-        frontmatter == null
-          ? elements
-          : [<MarkdownElement>frontmatter].concat(elements);
+        const elementsWithFm = frontmatter == null ? elements : [<MarkdownElement>frontmatter].concat(elements);
 
-      return {
-        filePath,
-        elements: elementsWithFm,
-        metadata: frontmatter?.metadata ?? {},
-        title,
-      };
-    })
+        return {
+          filePath,
+          elements: elementsWithFm,
+          metadata: frontmatter?.metadata ?? {},
+          title,
+        };
+      }),
+    "parseDocument"
   );
 }
 
@@ -603,9 +503,7 @@ export class MarkdownParser {
   constructor(protected tokenizer: Tokenizer) {}
 
   async parse(filePath: string, text: string): Promise<MarkdownDocument> {
-    const tokens = flatten(
-      await this.tokenizer.tokenize("text.html.markdown", text)
-    );
+    const tokens = flatten(await this.tokenizer.tokenize("text.html.markdown", text));
     const doc = parseDocument(filePath).parse(tokens);
 
     doc.filePath = filePath;
@@ -615,9 +513,7 @@ export class MarkdownParser {
 
   // TODO: Remove preview parser entirely.
   async preview(filePath: string, text: string): Promise<string> {
-    const tokens = flatten(
-      await this.tokenizer.tokenize("text.html.markdown", text)
-    );
+    const tokens = flatten(await this.tokenizer.tokenize("text.html.markdown", text));
     const preview = documentPreview(filePath).parse(tokens);
 
     return preview;
