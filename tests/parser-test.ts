@@ -1,13 +1,7 @@
 import { expect } from "chai";
 
-import {
-  filterElements,
-  MarkdownElement,
-  MarkdownParser,
-  MarkdownTokenizer,
-  Range,
-} from "../src/markdown";
-import { MarkdownHeading } from "../src/markdown/types";
+import { filterElements, MarkdownElement, MarkdownParser, MarkdownTokenizer, Range } from "../src/markdown";
+import { MarkdownElementBase, MarkdownHeading, MarkdownInlineLink, MarkdownReferenceLink } from "../src/markdown/types";
 
 async function createParser() {
   const tokenizer = new MarkdownTokenizer();
@@ -28,11 +22,16 @@ function getSrcRange(range: Range, src: string): string {
     const line = lines[i];
     for (let j = 0; j < line.length; j++) {
       if (i <= range.start.line && j < range.start.character) continue;
-      if (i >= range.end.line && j > range.end.character) continue;
+      if (i >= range.end.line && j >= range.end.character) continue;
       result += line[j];
     }
   }
   return result;
+}
+
+function testElement(element: MarkdownElementBase, elementContent: string, src: string) {
+  expect(element.content).to.be.equal(elementContent);
+  expect(element.content).to.be.equal(getSrcRange(element, src));
 }
 
 async function parse(src: string, elementType: string | null = null): Promise<MarkdownElement[]> {
@@ -47,28 +46,46 @@ describe("Parser tests", () => {
     const src = "# Foo\n\n## Bar ###\n\n### Baz @foo x   #";
     const [h1, h2, h3] = <MarkdownHeading[]>await parse(src, "heading");
 
-    expect(h1.content).to.be.equal("# Foo");
-    expect(h1.content).to.be.equal(getSrcRange(h1, src));
+    testElement(h1, "# Foo", src);
+    testElement(h1.title, "Foo", src);
     expect(h1.level).to.be.equal(1);
-    expect(h1.title.content).to.be.equal("Foo");
-    expect(h1.title.content).to.be.equal(getSrcRange(h1.title, src));
     expect(h1.children.length).to.be.equal(0);
 
-    expect(h2.content).to.be.equal("## Bar ###");
-    expect(h2.content).to.be.equal(getSrcRange(h2, src));
+    testElement(h2, "## Bar ###", src);
+    testElement(h2.title, "Bar", src);
     expect(h2.level).to.be.equal(2);
-    expect(h2.title.content).to.be.equal("Bar");
-    // FIXME
-    // expect(h2.title.content).to.be.equal(getSrcRange(h2.title, src));
     expect(h2.children.length).to.be.equal(0);
 
-    expect(h3.content).to.be.equal("### Baz @foo x   #");
-    expect(h3.content).to.be.equal(getSrcRange(h3, src));
+    testElement(h3, "### Baz @foo x   #", src);
+    testElement(h3.title, "Baz @foo x", src);
     expect(h3.level).to.be.equal(3);
-    expect(h3.title.content).to.be.equal("Baz @foo x");
-    // FIXME
-    // expect(h3.title.content).to.be.equal(getSrcRange(h3.title, src));
     expect(h3.children.length).to.be.equal(1);
     expect(h3.children[0].type).to.be.equal("citation");
+  });
+
+  it("Parsing inline links", async () => {
+    const src = "[x](y.md)\n# xxx [  a ](b.md) yyy";
+    const [inlineLink1, inlineLink2] = <MarkdownInlineLink[]>await parse(src, "inlineLink");
+
+    testElement(inlineLink1, "[x](y.md)", src);
+    testElement(inlineLink1.title!, "x", src);
+    testElement(inlineLink1.path!, "y.md", src);
+
+    testElement(inlineLink2, "[  a ](b.md)", src);
+    testElement(inlineLink2.title!, "  a ", src);
+    testElement(inlineLink2.path!, "b.md", src);
+  });
+
+  it("Parsing reference links", async () => {
+    const src = "[foo]\n# xxx [bar][baz] yyy";
+    const [referenceLink1, referenceLink2] = <MarkdownReferenceLink[]>await parse(src, "referenceLink");
+
+    testElement(referenceLink1, "[foo]", src);
+    testElement(referenceLink1.reference!, "foo", src);
+    expect(referenceLink1.title).to.be.equal(null);
+
+    testElement(referenceLink2, "[bar][baz]", src);
+    testElement(referenceLink2.title!, "bar", src);
+    testElement(referenceLink2.reference!, "baz", src);
   });
 });
