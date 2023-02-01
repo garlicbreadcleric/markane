@@ -1,7 +1,14 @@
 import { expect } from "chai";
 
-import { filterElements, MarkdownElement, MarkdownParser, MarkdownTokenizer, Range } from "../src/markdown";
-import { MarkdownElementBase, MarkdownHeading, MarkdownInlineLink, MarkdownReferenceLink } from "../src/markdown/types";
+import { filterElements, MarkdownElement, MarkdownParser, MarkdownTokenizer, Position, Range } from "../src/markdown";
+import {
+  MarkdownDocument,
+  MarkdownElementBase,
+  MarkdownHeading,
+  MarkdownInlineLink,
+  MarkdownReferenceLink,
+} from "../src/markdown/types";
+import { comparePositions } from "../src/parsec";
 
 async function createParser() {
   const tokenizer = new MarkdownTokenizer();
@@ -29,6 +36,32 @@ function getSrcRange(range: Range, src: string): string {
   return result;
 }
 
+function testDocumentSorting(document: MarkdownDocument) {
+  for (let i = 0; i < document.elements.length; i++) {
+    testElementSorting(document.elements[i]);
+    if (i > 0) {
+      expect(comparePositions(document.elements[i].end, document.elements[i - 1].start)).to.be.oneOf([0, 1]);
+    }
+  }
+}
+
+function testElementSorting(element: MarkdownElement) {
+  if ((<any>element).children != null) {
+    const children: MarkdownElement[] = (<any>element).children;
+
+    let lastEnd: Position | null = null;
+    for (const child of children) {
+      expect(comparePositions(child.start, element.start)).to.be.oneOf([1, 0]);
+      expect(comparePositions(child.end, element.end)).to.be.oneOf([-1, 0]);
+      if (lastEnd != null) {
+        expect(comparePositions(child.start, lastEnd)).to.be.oneOf([1, 0]);
+      }
+      lastEnd = child.end;
+      testElementSorting(child);
+    }
+  }
+}
+
 function testElement(element: MarkdownElementBase, elementContent: string, src: string) {
   expect(element.content).to.be.equal(elementContent);
   expect(element.content).to.be.equal(getSrcRange(element, src));
@@ -37,6 +70,7 @@ function testElement(element: MarkdownElementBase, elementContent: string, src: 
 async function parse(src: string, elementType: string | null = null): Promise<MarkdownElement[]> {
   const parser = await createParser();
   const doc = await parser.parse("input.md", src);
+  testDocumentSorting(doc);
   const elements = filterElements((e) => (elementType == null ? true : e.type === elementType), doc.elements);
   return elements;
 }

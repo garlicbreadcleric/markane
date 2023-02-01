@@ -7,3 +7,11 @@ export function isWithinRange({ line, character }: Position, { start, end }: Ran
 
   return startsBefore && endsAfter;
 }
+
+export function comparePositions(p1: Position, p2: Position): -1 | 0 | 1 {
+  if (p1.line < p2.line) return -1;
+  if (p1.line > p2.line) return 1;
+  if (p1.character < p2.character) return -1;
+  if (p1.character > p2.character) return 1;
+  return 0;
+}
