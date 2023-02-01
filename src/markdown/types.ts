@@ -1,5 +1,5 @@
 import { Predicate } from "../utils";
-import { isWithinRange, Position } from "../parsec/position";
+import { comparePositions, isWithinRange, Position } from "../parsec/position";
 import { getTokensContent, getTokensRange, HasRange, Token } from "../parsec/tokenizer";
 
 export type MarkdownElementBase = HasRange & {
@@ -184,7 +184,25 @@ export function getElementAt(
   pos: Position,
   narrow: boolean = true
 ): MarkdownElement | null {
-  const parent = findElement((e) => isWithinRange(pos, e), elements);
+  let startIndex = 0;
+  let endIndex = elements.length - 1;
+  let parent = null;
+
+  while (startIndex < endIndex) {
+    const index = Math.round((startIndex + endIndex) / 2);
+    const element = elements[index];
+    const cmpStart = comparePositions(pos, element.start);
+    const cmpEnd = comparePositions(pos, element.end);
+    if (cmpStart < 0) {
+      endIndex = index - 1;
+    } else if (cmpEnd > 0) {
+      startIndex = index + 1;
+    } else {
+      parent = element;
+      break;
+    }
+  }
+
   if (parent != null && narrow) {
     const child = getElementAt(getElementChildren(parent), pos);
     if (child != null) {
