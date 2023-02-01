@@ -188,7 +188,7 @@ export function getElementAt(
   let endIndex = elements.length - 1;
   let parent = null;
 
-  while (startIndex < endIndex) {
+  while (startIndex <= endIndex) {
     const index = Math.round((startIndex + endIndex) / 2);
     const element = elements[index];
     const cmpStart = comparePositions(pos, element.start);
