@@ -431,46 +431,51 @@ export const parseElement: parsec.Parser<MarkdownElement> = parsec
   ])
   .withName("parseElement");
 
+// TODO: This can be brought back if we ever need to be able to restore the
+// original document source from AST/CST. For now it's rewritten for
+// performance reasons.
+//
+// export function parseElements(tokenComeback: parsec.Parser<Token> | null = null): parsec.Parser<MarkdownElement[]> {
+//   return parsec
+//     .manyWithAccAndComeback<MarkdownElement, Token, MarkdownElement[]>(
+//       parseElement,
+//       tokenComeback ?? parsec.takeOne,
+//       (element: MarkdownElement, acc: MarkdownElement[]) => acc.concat([element]),
+//       (token: Token, acc: MarkdownElement[]) => {
+//         return acc;
+//         if (acc.length === 0 || acc[acc.length - 1].type != "raw") {
+//           return acc.concat([
+//             {
+//               type: "raw",
+//               content: token.content,
+//               start: token.start,
+//               end: token.end,
+//             },
+//           ]);
+//         } else {
+//           const acc2 = acc.slice(0, -1);
+//           let previousRaw = acc[acc.length - 1];
+//           let content = previousRaw.content;
+//           if (token.start.line > previousRaw.end.line) {
+//             content += "\n".repeat(token.start.line - previousRaw.end.line);
+//           }
+//           content += token.content;
+//           acc2.push({
+//             type: "raw",
+//             content,
+//             start: previousRaw.start,
+//             end: token.end,
+//           });
+//           return acc2;
+//         }
+//       },
+//       []
+//     )
+//     .map(({ acc }) => acc, "parseElements");
+// }
+
 export function parseElements(tokenComeback: parsec.Parser<Token> | null = null): parsec.Parser<MarkdownElement[]> {
-  return parsec
-    .manyWithAccAndComeback<MarkdownElement, Token, MarkdownElement[]>(
-      parseElement,
-      tokenComeback ?? parsec.takeOne,
-      (element: MarkdownElement, acc: MarkdownElement[]) => acc.concat([element]),
-      (token: Token, acc: MarkdownElement[]) => {
-        return acc;
-        if (acc.length === 0 || acc[acc.length - 1].type != "raw") {
-          return acc.concat([
-            {
-              type: "raw",
-              content: token.content,
-              start: token.start,
-              end: token.end,
-            },
-          ]);
-        } else {
-          const acc2 = acc.slice(0, -1);
-          let previousRaw = acc[acc.length - 1];
-          let content = previousRaw.content;
-
-          if (token.start.line > previousRaw.end.line) {
-            content += "\n".repeat(token.start.line - previousRaw.end.line);
-          }
-          content += token.content;
-
-          acc2.push({
-            type: "raw",
-            content,
-            start: previousRaw.start,
-            end: token.end,
-          });
-
-          return acc2;
-        }
-      },
-      []
-    )
-    .map(({ acc }) => acc, "parseElements");
+  return parsec.manyWithComeback(parseElement, tokenComeback ?? parsec.takeOne, "parseElement");
 }
 
 export function parseDocument(filePath: string): parsec.Parser<MarkdownDocument> {
