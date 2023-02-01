@@ -438,6 +438,7 @@ export function parseElements(tokenComeback: parsec.Parser<Token> | null = null)
       tokenComeback ?? parsec.takeOne,
       (element: MarkdownElement, acc: MarkdownElement[]) => acc.concat([element]),
       (token: Token, acc: MarkdownElement[]) => {
+        return acc;
         if (acc.length === 0 || acc[acc.length - 1].type != "raw") {
           return acc.concat([
             {
