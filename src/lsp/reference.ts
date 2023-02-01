@@ -1,13 +1,12 @@
 import * as path from "path";
 import * as url from "url";
 
-import { Location, TextDocuments } from "vscode-languageserver";
+import { Location } from "vscode-languageserver";
 
 import * as markdown from "../markdown";
 import { Config } from "../config";
 import { DocumentProvider } from "../providers/document-provider";
-import { findIndicesOf } from "../utils";
-import { TextDocument } from "vscode-languageserver-textdocument";
+import { findIndicesOf, nullableToArray } from "../utils";
 
 export class ReferenceManager {
   constructor(protected config: Config, protected documentProvider: DocumentProvider) {}
@@ -45,8 +44,8 @@ export class ReferenceManager {
     return locations;
   }
 
-  getMentions(textDocuments: TextDocuments<TextDocument>, document: markdown.MarkdownDocument): Location[] {
-    const titles = [document.title ?? null, ...(document.metadata?.aliases ?? [])].filter((x) => x != null);
+  getMentions(document: markdown.MarkdownDocument): Location[] {
+    const titles: string[] = [...nullableToArray(document.title), ...(document.metadata?.aliases ?? [])];
 
     const locations: Location[] = [];
 
@@ -56,13 +55,11 @@ export class ReferenceManager {
       }
       for (const title of titles) {
         if (doc.source == null) continue;
-        const textDocument = textDocuments.get(url.pathToFileURL(doc.filePath).toString());
-        if (textDocument == null) continue;
         const startIndices = findIndicesOf(title, doc.source);
 
         for (const startIndex of startIndices) {
-          const start = textDocument.positionAt(startIndex);
-          const end = textDocument.positionAt(startIndex + title.length);
+          const start = positionAt(doc.source, startIndex);
+          const end = positionAt(doc.source, startIndex + title.length);
 
           const element =
             markdown.getElementAt(doc.elements, start, true) ?? markdown.getElementAt(doc.elements, end, true);
@@ -79,4 +76,22 @@ export class ReferenceManager {
 
     return locations;
   }
+}
+
+function positionAt(src: string, offset: number): markdown.Position {
+  const position: markdown.Position = { line: 0, character: 0 };
+  for (let i = 0; i < offset && i < src.length; i++) {
+    const c = src[i];
+    if (c === "\n") {
+      position.line += 1;
+      position.character = 0;
+    } else if (c === "\r") {
+      // I think '\r' should be ignored, but I'm not sure.
+      // TODO: Check VS Code's implementation.
+    } else {
+      position.character += 1;
+    }
+  }
+
+  return position;
 }

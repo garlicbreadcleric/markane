@@ -130,7 +130,7 @@ export async function runLspServer(
     const heading = markdown.findElement((e) => e.type === "heading" && e.level === 1, document.elements);
 
     const referencesLocations = referenceManager.getReferencesToPath(documentPath);
-    const mentionsLocations = referenceManager.getMentions(documents, document);
+    const mentionsLocations = referenceManager.getMentions(document);
 
     const range =
       heading == null

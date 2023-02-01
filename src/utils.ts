@@ -154,3 +154,10 @@ export function findIndicesOf(substr: string, str: string) {
   }
   return indices;
 }
+
+export function nullableToArray<T>(x: T | null | undefined): T[] {
+  if (x == null) {
+    return [];
+  }
+  return [x];
+}
