@@ -33,15 +33,21 @@ async function main() {
 
   console.log(`Parsing tmie: ${parsingTime} ms`);
 
+  const elements = [];
+
   const searchTime = await benchmark(async () => {
     for (let i = 0; i < 100; i++) {
       for (let j = 0; j < 100; j++) {
-        markane.markdown.getElementAt(doc.elements, { line: i * 100, character: j }, true);
+        const element = markane.markdown.getElementAt(doc.elements, { line: i * 100, character: j }, true);
+        if (element != null) {
+          elements.push(element);
+        }
       }
     }
   });
 
   console.log(`Search time: ${searchTime} ms`);
+  console.log(`Number of elements: ${elements.length}`);
 }
 
 main();
