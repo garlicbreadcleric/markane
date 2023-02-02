@@ -2,6 +2,7 @@ import { expect } from "chai";
 
 import { filterElements, MarkdownElement, MarkdownParser, MarkdownTokenizer, Position, Range } from "../src/markdown";
 import {
+  getElementAt,
   MarkdownDocument,
   MarkdownElementBase,
   MarkdownHeading,
@@ -78,7 +79,8 @@ async function parse(src: string, elementType: string | null = null): Promise<Ma
 describe("Parser tests", () => {
   it("Parsing headings", async () => {
     const src = "# Foo\n\n## Bar ###\n\n### Baz @foo x   #";
-    const [h1, h2, h3] = <MarkdownHeading[]>await parse(src, "heading");
+    const elements = <MarkdownHeading[]>await parse(src, "heading");
+    const [h1, h2, h3] = elements;
 
     testElement(h1, "# Foo", src);
     testElement(h1.title, "Foo", src);
@@ -95,11 +97,20 @@ describe("Parser tests", () => {
     expect(h3.level).to.be.equal(3);
     expect(h3.children.length).to.be.equal(1);
     expect(h3.children[0].type).to.be.equal("citation");
+
+    const outerElement = getElementAt(elements, { line: 4, character: 10 }, false)!;
+    const innerElement = getElementAt(elements, { line: 4, character: 10 }, true)!;
+
+    expect(outerElement).to.be.not.equal(null);
+    expect(innerElement).to.be.not.equal(null);
+    expect(outerElement.type).to.be.equal("heading");
+    expect(innerElement.type).to.be.equal("citation");
   });
 
   it("Parsing inline links", async () => {
     const src = "[x](y.md)\n# xxx [  a ](b.md) yyy";
-    const [inlineLink1, inlineLink2] = <MarkdownInlineLink[]>await parse(src, "inlineLink");
+    const elements = <MarkdownInlineLink[]>await parse(src, "inlineLink");
+    const [inlineLink1, inlineLink2] = elements;
 
     testElement(inlineLink1, "[x](y.md)", src);
     testElement(inlineLink1.title!, "x", src);
@@ -108,6 +119,14 @@ describe("Parser tests", () => {
     testElement(inlineLink2, "[  a ](b.md)", src);
     testElement(inlineLink2.title!, "  a ", src);
     testElement(inlineLink2.path!, "b.md", src);
+
+    for (let c = 0; c < 10; c++) {
+      const element = getElementAt(elements, { line: 0, character: c }, true)!;
+      expect(element).to.be.not.equal(null);
+      expect(element.type).to.be.equal("inlineLink");
+    }
+
+    expect(getElementAt(elements, { line: 0, character: 10 }, true)).to.be.equal(null);
   });
 
   it("Parsing reference links", async () => {
