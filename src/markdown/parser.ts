@@ -509,7 +509,7 @@ export class MarkdownParser {
   constructor(protected tokenizer: Tokenizer) {}
 
   async parse(filePath: string, text: string): Promise<MarkdownDocument> {
-    const tokens = flatten(await this.tokenizer.tokenize("text.html.markdown", text));
+    const tokens = await this.tokenizer.tokenize("text.html.markdown", text);
     const doc = parseDocument(filePath).parse(tokens);
 
     doc.filePath = filePath;
@@ -519,7 +519,7 @@ export class MarkdownParser {
 
   // TODO: Remove preview parser entirely.
   async preview(filePath: string, text: string): Promise<string> {
-    const tokens = flatten(await this.tokenizer.tokenize("text.html.markdown", text));
+    const tokens = await this.tokenizer.tokenize("text.html.markdown", text);
     const preview = documentPreview(filePath).parse(tokens);
 
     return preview;

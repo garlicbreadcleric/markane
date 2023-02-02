@@ -176,11 +176,9 @@ export async function main() {
           break;
         }
         case "textmate": {
-          const lines = await tokenizer.tokenize("text.html.markdown", input);
-          for (const line of lines) {
-            for (const { start, end, scopes, content } of line) {
-              console.log(JSON.stringify({ start, end, scopes: scopes.join(", "), content }, null, 2));
-            }
+          const tokens = await tokenizer.tokenize("text.html.markdown", input);
+          for (const { start, end, scopes, content } of tokens) {
+            console.log(JSON.stringify({ start, end, scopes: scopes.join(", "), content }, null, 2));
           }
           break;
         }

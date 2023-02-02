@@ -22,16 +22,22 @@ async function main() {
 
   const tokenizer = new markane.markdown.MarkdownTokenizer();
   await tokenizer.loadGrammar("text.html.markdown");
-  const parser = new markane.markdown.MarkdownParser(tokenizer);
 
   console.log(`Number of lines: ${src.split("\n").length}`);
 
-  let doc;
-  const parsingTime = await benchmark(async () => {
-    doc = await parser.parse("input.md", src);
+  let tokens;
+  const tokenizationTime = await benchmark(async () => {
+    tokens = await tokenizer.tokenize("text.html.markdown", src);
   });
 
-  console.log(`Parsing tmie: ${parsingTime} ms`);
+  let doc;
+  const parsingTime = await benchmark(async () => {
+    doc = markane.markdown.parseDocument("input.md").run({ offset: 0, tokens }).value;
+  });
+
+  console.log(`Tokenization time: ${tokenizationTime} ms`);
+  console.log(`Parsing time: ${parsingTime} ms`);
+  console.log(`Full parsing time: ${tokenizationTime + parsingTime} ms`);
 
   const elements = [];
 

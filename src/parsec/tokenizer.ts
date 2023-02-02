@@ -19,7 +19,7 @@ export type HasRangeAndContent = HasRange & {
 };
 
 export type Token = HasRangeAndContent & {
-  scopes: TokenScope[]; // TODO: Might change array to set to make scope checks cheaper.
+  scopes: TokenScope[];
 };
 
 export function getTokensRange(tokens: HasRangeAndContent[]): Range | null {
@@ -119,13 +119,13 @@ export class Tokenizer {
     return grammar;
   }
 
-  async tokenize(scopeName: string, text: string | string[]): Promise<Token[][]> {
+  async tokenize(scopeName: string, text: string | string[]): Promise<Token[]> {
     const grammar = await this.loadGrammar(scopeName);
 
     let ruleStack = vsctm.INITIAL;
     const lines = text instanceof Array ? text : text.split("\n");
 
-    return lines.map((line, i) => {
+    return lines.flatMap((line, i) => {
       const { tokens, ruleStack: ruleStack1 } = grammar.tokenizeLine(line, ruleStack);
       ruleStack = ruleStack1;
 
