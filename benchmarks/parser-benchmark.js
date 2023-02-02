@@ -1,5 +1,7 @@
 const { performance } = require("node:perf_hooks");
 
+const markdownIt = require("markdown-it");
+
 const markane = require("../dist");
 
 async function benchmark(f) {
@@ -36,8 +38,10 @@ async function main() {
   });
 
   console.log(`Tokenization time: ${tokenizationTime} ms`);
+  console.log(`Number of tokens: ${tokens.length}`);
   console.log(`Parsing time: ${parsingTime} ms`);
   console.log(`Full parsing time: ${tokenizationTime + parsingTime} ms`);
+  console.log(`Number of elements: ${doc.elements.length}`);
 
   const elements = [];
 
@@ -53,7 +57,15 @@ async function main() {
   });
 
   console.log(`Search time: ${searchTime} ms`);
-  console.log(`Number of elements: ${elements.length}`);
+
+  console.log();
+
+  let markdownItTokens;
+  const markdownItTime = await benchmark(async () => {
+    markdownItTokens = markdownIt().parse(src, {});
+  });
+  console.log(`(markdown-it) Tokenization time: ${markdownItTime}`);
+  console.log(`(markdown-it) Number of tokens: ${markdownItTokens.length}`);
 }
 
 main();
